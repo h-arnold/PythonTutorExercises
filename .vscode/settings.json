@@ -7,8 +7,6 @@
     "python.testing.pytestArgs": [
         "tests"
     ],
-    "python.linting.enabled": true,
-    "python.linting.ruffEnabled": true,
     "python.formatting.provider": "none",
     "[python]": {
         "editor.defaultFormatter": "charliermarsh.ruff",

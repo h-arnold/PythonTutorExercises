@@ -45,6 +45,8 @@ This repository is configured for optimal use with GitHub Copilot:
 3. Copilot will provide suggestions based on function signatures, docstrings, and comments
 4. Use Copilot Chat to ask questions about exercises or get help with solutions
 
+**Note for Windows users:** The VS Code settings file uses a Unix-style path for the Python interpreter. VS Code should automatically detect your virtual environment, but if needed, you can manually select the interpreter using the Command Palette (Ctrl+Shift+P) and searching for "Python: Select Interpreter".
+
 ## Project Structure
 
 ```
