@@ -1,7 +1,7 @@
 ---
 name: Exercise Generation
 description: Generate notebook-first Python exercises (tagged cells + pytest grading)
-tools: []
+tools: ['vscode/getProjectSetupInfo', 'vscode/openSimpleBrowser', 'vscode/runCommand', 'vscode/vscodeAPI', 'execute', 'read', 'edit', 'search', 'web', 'todo']
 ---
 # Bassaleg Python Tutor — Exercise Generation Mode
 
