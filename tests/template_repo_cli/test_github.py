@@ -195,7 +195,7 @@ class TestParseGhOutput:
         client = GitHubClient()
         output = "Not valid JSON"
 
-        with pytest.raises((ValueError, Exception)):
+        with pytest.raises(ValueError):
             client.parse_json_output(output)
 
 

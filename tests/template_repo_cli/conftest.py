@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import tempfile
+from collections.abc import Generator
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -37,14 +37,14 @@ def sample_exercises(repo_root: Path) -> dict[str, dict[str, Path]]:
 
 
 @pytest.fixture
-def temp_dir() -> Any:
+def temp_dir() -> Generator[Path, None, None]:
     """Create a temporary directory for testing."""
     with tempfile.TemporaryDirectory() as tmpdir:
         yield Path(tmpdir)
 
 
 @pytest.fixture
-def mock_gh_success() -> Any:
+def mock_gh_success() -> MagicMock:
     """Mock successful gh CLI execution."""
     mock = MagicMock()
     mock.return_value = MagicMock(
@@ -54,7 +54,7 @@ def mock_gh_success() -> Any:
 
 
 @pytest.fixture
-def mock_gh_failure() -> Any:
+def mock_gh_failure() -> MagicMock:
     """Mock failed gh CLI execution."""
     mock = MagicMock()
     mock.return_value = MagicMock(returncode=1, stdout="", stderr="Error occurred")
@@ -62,7 +62,7 @@ def mock_gh_failure() -> Any:
 
 
 @pytest.fixture
-def mock_gh_auth_error() -> Any:
+def mock_gh_auth_error() -> MagicMock:
     """Mock gh CLI authentication error."""
     mock = MagicMock()
     mock.return_value = MagicMock(

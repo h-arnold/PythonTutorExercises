@@ -25,7 +25,7 @@ class ExerciseSelector:
         self.notebooks_dir = repo_root / "notebooks"
         self.exercises_dir = repo_root / "exercises"
 
-    def _get_all_notebooks(self) -> list[str]:
+    def get_all_notebooks(self) -> list[str]:
         """Get all notebook IDs from the notebooks directory.
         
         Returns:
@@ -154,7 +154,7 @@ class ExerciseSelector:
             raise ValueError("At least one notebook must be specified")
         
         # Get all available notebooks
-        available = self._get_all_notebooks()
+        available = self.get_all_notebooks()
         
         # Validate each notebook exists
         for notebook in notebooks:
@@ -179,7 +179,7 @@ class ExerciseSelector:
             raise ValueError(f"Invalid pattern: {pattern}")
         
         # Get all notebooks and filter by pattern
-        all_notebooks = self._get_all_notebooks()
+        all_notebooks = self.get_all_notebooks()
         matching = [nb for nb in all_notebooks if fnmatch.fnmatch(nb, pattern)]
         
         return sorted(matching)

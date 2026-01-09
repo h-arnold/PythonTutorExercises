@@ -206,7 +206,7 @@ class TestCliValidateCommand:
         result = main(["validate", "--construct", "sequence"])
         
         # Should succeed if files exist
-        assert result in (0, 1)  # Either success or missing files
+        assert result == 0
 
     def test_cli_validate_invalid_selection(self, repo_root: Path) -> None:
         """Test validate command with invalid selection."""

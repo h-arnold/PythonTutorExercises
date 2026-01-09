@@ -47,18 +47,18 @@ pytest -q
 
 Run tests for a specific exercise:
 ```bash
-pytest tests/test_exNNN_slug.py -v
+pytest tests/test_ex001_exercise_name.py -v
 ```
 
 ## Project Structure
 
 ```
 notebooks/               # Exercise notebooks (student version)
-  exNNN_slug.ipynb
+  ex001_exercise_name.ipynb
   solutions/            # Solution notebooks (instructor reference)
-    exNNN_slug.ipynb
+    ex001_exercise_name.ipynb
 tests/                  # Automated tests
-  test_exNNN_slug.py
+  test_ex001_exercise_name.py
   notebook_grader.py    # Grading framework
 ```
 

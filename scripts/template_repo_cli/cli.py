@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
+import shutil
 import sys
+import traceback
 from pathlib import Path
 
 from scripts.template_repo_cli.core.collector import FileCollector
@@ -141,7 +144,6 @@ def create_command(args: argparse.Namespace) -> int:
             packager.cleanup(workspace)
         else:
             # Copy to output directory instead of cleaning up
-            import shutil
             output_path = Path(args.output_dir)
             try:
                 if output_path.exists():
@@ -154,8 +156,14 @@ def create_command(args: argparse.Namespace) -> int:
             packager.cleanup(workspace)
             print(f"Output saved to: {output_path}")
         
-    except Exception as e:
+    except (FileNotFoundError, ValueError, RuntimeError) as e:
         print(f"Error: {e}", file=sys.stderr)
+        packager.cleanup(workspace)
+        return 1
+    except Exception as e:
+        print(f"Unexpected error: {e}", file=sys.stderr)
+        if args.verbose:
+            traceback.print_exc()
         packager.cleanup(workspace)
         return 1
     
@@ -179,11 +187,10 @@ def list_command(args: argparse.Namespace) -> int:
         exercises = selector.select_by_construct([args.construct])
     else:
         # List all exercises
-        exercises = selector._get_all_notebooks()
+        exercises = selector.get_all_notebooks()
     
     # Print exercises
     if args.format == "json":
-        import json
         print(json.dumps(exercises, indent=2))
     elif args.format == "table":
         print(f"{'Exercise ID':<40}")

@@ -81,7 +81,7 @@ class TestCollectMissingFiles:
 
         # Metadata might be None if missing, but shouldn't raise error
         # This depends on implementation - metadata might be optional
-        assert "metadata" in files or True  # Flexible assertion
+        assert "metadata" in files
 
 
 class TestCollectFileStructure:

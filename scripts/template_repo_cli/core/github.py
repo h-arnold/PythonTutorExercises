@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any
 
 
 class GitHubClient:
@@ -62,7 +63,7 @@ class GitHubClient:
         
         return cmd
 
-    def execute_command(self, cmd: list[str]) -> dict[str, any]:
+    def execute_command(self, cmd: list[str]) -> dict[str, Any]:
         """Execute a gh command.
         
         Args:
@@ -82,7 +83,7 @@ class GitHubClient:
                 "error": result.stderr,
                 "returncode": result.returncode,
             }
-        except Exception as e:
+        except (OSError, subprocess.SubprocessError) as e:
             return {"success": False, "error": str(e)}
 
     def check_gh_installed(self) -> bool:
@@ -132,7 +133,7 @@ class GitHubClient:
 
     def create_repository(
         self, repo_name: str, workspace: Path, push: bool = False
-    ) -> dict[str, any]:
+    ) -> dict[str, Any]:
         """Create a GitHub repository.
         
         Args:
@@ -181,7 +182,33 @@ class GitHubClient:
         Args:
             workspace: Workspace directory.
             message: Commit message.
+            
+        Raises:
+            RuntimeError: If git user configuration is missing.
         """
+        # Check if git is configured
+        user_name = subprocess.run(
+            ["git", "config", "user.name"],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        user_email = subprocess.run(
+            ["git", "config", "user.email"],
+            cwd=workspace,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        
+        if not user_name.stdout.strip() or not user_email.stdout.strip():
+            raise RuntimeError(
+                "Git user configuration is missing. "
+                "Please configure git with 'git config --global user.name' "
+                "and 'git config --global user.email'"
+            )
+        
         # Add all files
         subprocess.run(
             ["git", "add", "."], cwd=workspace, capture_output=True, check=True
