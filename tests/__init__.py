@@ -1,3 +1,1 @@
-"""
-Test suite for Python Tutor Exercises
-"""
+"""Pytest test suite for the exercises."""

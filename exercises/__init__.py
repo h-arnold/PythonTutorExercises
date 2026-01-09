@@ -1,7 +1,5 @@
-"""
-Python Tutor Exercises Package
+"""Exercise packages.
 
-This package contains exercises and solutions for learning Python.
+Each exercise lives in its own subfolder (e.g. exercises/ex001_variables/).
+This folder is optional and typically holds teacher notes/prompts (README.md).
 """
-
-__version__ = "0.1.0"

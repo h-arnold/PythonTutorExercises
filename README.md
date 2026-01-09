@@ -1,133 +1,54 @@
-# PythonTutorExercises
+# Bassaleg Python Tutor Exercises
 
-This repository contains all of the Bassaleg Python Tutor Exercises and System Prompt for the Gemini Gem.
+Notebook-based Python exercises with automated grading via `pytest` (GitHub Classroom friendly).
 
-## Setup
+## Repo layout
 
-### Prerequisites
-- Python 3.8 or higher
-- pip (Python package installer)
+- `notebooks/`
+	- One notebook per exercise: `notebooks/exNNN_slug.ipynb`
+	- Students write code **inline** in a dedicated student cell (tagged `student` or starting with `# STUDENT`)
+- `tests/`
+	- `tests/test_exNNN_slug.py` contains automated tests
+	- Tests extract + execute the student cell (see `tests/notebook_grader.py`)
+- `scripts/new_exercise.py`
+	- Scaffolds a new exercise skeleton
 
-### Installation
+Optional (teacher notes / materials):
+- `exercises/`
+	- One folder per exercise: `exercises/exNNN_slug/README.md`
 
-1. Clone the repository:
-```bash
-git clone https://github.com/Bassaleg-School/PythonTutorExercises.git
-cd PythonTutorExercises
-```
+## Quickstart
 
-2. Create a virtual environment:
+Create a virtualenv and install dev dependencies:
+
 ```bash
 python -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip
+python -m pip install -e ".[dev]"
 ```
-
-3. Activate the virtual environment:
-   - **Windows:**
-     ```bash
-     .venv\Scripts\activate
-     ```
-   - **macOS/Linux:**
-     ```bash
-     source .venv/bin/activate
-     ```
-
-4. Install the package in development mode with dev dependencies:
-```bash
-pip install -e ".[dev]"
-```
-
-## Using GitHub Copilot
-
-This repository is configured for optimal use with GitHub Copilot:
-
-1. Install the recommended VS Code extensions (you'll be prompted when opening the project)
-2. Open any Python file in the `exercises/` directory
-3. Copilot will provide suggestions based on function signatures, docstrings, and comments
-4. Use Copilot Chat to ask questions about exercises or get help with solutions
-
-**Note for Windows users:** The VS Code settings file uses a Unix-style path for the Python interpreter. VS Code should automatically detect your virtual environment, but if needed, you can manually select the interpreter using the Command Palette (Ctrl+Shift+P) and searching for "Python: Select Interpreter".
-
-## Project Structure
-
-```
-PythonTutorExercises/
-├── exercises/          # Exercise files go here
-│   ├── __init__.py
-│   └── example_hello.py
-├── tests/              # Test files go here
-│   ├── __init__.py
-│   └── test_example_hello.py
-├── .vscode/            # VS Code configuration
-│   ├── settings.json   # Python and Copilot settings
-│   ├── launch.json     # Debug configurations
-│   └── extensions.json # Recommended extensions
-├── pyproject.toml      # Project configuration and dependencies
-├── .gitignore
-├── LICENSE
-└── README.md
-```
-
-## Running Tests
 
 Run all tests:
+
 ```bash
-pytest
+pytest -q
 ```
 
-Run tests with coverage:
+## Create a new exercise
+
 ```bash
-pytest --cov=exercises --cov-report=term-missing
+python scripts/new_exercise.py ex001 "Variables and Types" --slug variables_and_types
 ```
 
-Run a specific test file:
-```bash
-pytest tests/test_example_hello.py
-```
+This creates:
+- `notebooks/ex001_variables_and_types.ipynb`
+- `tests/test_ex001_variables_and_types.py`
 
-## Linting and Formatting
+And (optional):
+- `exercises/ex001_variables_and_types/README.md`
 
-This project uses Ruff for linting and formatting.
+## Notes
 
-Check for linting issues:
-```bash
-ruff check .
-```
+- The notebook is for explanation and scratch work.
+- Grading is driven by `pytest` (see `.github/workflows/tests.yml`).
 
-Auto-fix linting issues:
-```bash
-ruff check --fix .
-```
-
-Format code:
-```bash
-ruff format .
-```
-
-## Creating New Exercises
-
-1. Create a new Python file in the `exercises/` directory (e.g., `exercises/my_exercise.py`)
-2. Add exercise instructions in the docstring
-3. Define function signatures with type hints
-4. Create corresponding test file in `tests/` directory (e.g., `tests/test_my_exercise.py`)
-5. Use Copilot to help generate solutions and tests
-
-## Development Workflow
-
-1. Write exercise description and function signature
-2. Use Copilot to generate initial solution
-3. Write tests to verify the solution
-4. Run tests: `pytest`
-5. Format code: `ruff format .`
-6. Commit changes
-
-## Contributing
-
-When creating exercises:
-- Include clear docstrings with examples
-- Add type hints to function signatures
-- Write comprehensive tests
-- Follow PEP 8 style guide (enforced by Ruff)
-
-## License
-
-See LICENSE file for details.
