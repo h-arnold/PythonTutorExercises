@@ -34,17 +34,9 @@ See the [Setup Guide](docs/setup.md) for detailed instructions.
 
 ## For Teachers
 
-### Creating Exercises
+Use the [exercise generation custom agent](https://github.com/features/copilot) to create new exercises. Simply describe the exercise you want and the agent will generate the notebook, tests, and supporting materials.
 
-```bash
-# Single exercise
-python scripts/new_exercise.py ex042 "Variables and Types" --slug variables_and_types
-
-# Multi-part exercise (10 parts in one notebook)
-python scripts/new_exercise.py ex043 "Week 1 Practice" --slug week1 --parts 10
-```
-
-See the [Exercise Generation Guide](docs/exercise-generation.md) for detailed workflow.
+For manual scaffolding or to understand the structure, see the [Exercise Generation Guide](docs/exercise-generation.md).
 
 ### Verifying Solutions
 

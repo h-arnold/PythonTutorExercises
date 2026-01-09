@@ -130,17 +130,6 @@ ruff check .
 ruff check --fix .
 ```
 
-The repository uses Ruff for code quality with these rules:
-- `E`: PEP 8 errors
-- `F`: PyFlakes (undefined names, imports)
-- `I`: Import sorting
-- `UP`: Upgrade syntax
-- `B`: Bugbear (common bugs)
-- `C90`: McCabe complexity
-- `LOG`: Logging
-- `PIE`: Miscellaneous lints
-- `RUF`: Ruff-specific rules
-
 Configuration is in `pyproject.toml`.
 
 ## GitHub Classroom Integration

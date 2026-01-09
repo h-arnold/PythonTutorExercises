@@ -64,12 +64,14 @@ Students learn constructs in order. Exercises must only use constructs students 
 
 ## Coding Standards
 
-### Python Style
+### Python Style (for infrastructure code, not student exercises)
 
 - **Language**: Python 3.11+
 - **Linting**: Ruff (configured in `pyproject.toml`)
 - **Type hints**: Use modern syntax (e.g., `list[str]` not `List[str]`)
-- **Docstrings**: Required for public functions in infrastructure code
+- **Docstrings**: Required for public functions
+
+Student exercise code in notebooks may omit these standards as exercises are designed for learning.
 
 ### Testing Standards
 
@@ -81,7 +83,7 @@ Students learn constructs in order. Exercises must only use constructs students 
 ### Notebook Standards
 
 - **Format**: Standard `.ipynb` JSON
-- **Cell metadata**: Must include `metadata.language` ("python" or "markdown")
+- **Cell metadata**: Generated notebooks include `metadata.language` ("python" or "markdown")
 - **Tags**: Exact match required (e.g., `exercise1`, not `Exercise1` or `exercise_1`)
 - **Function names**: Prefer `solve()` for consistency
 
@@ -127,7 +129,7 @@ See [Testing Framework](../docs/testing-framework.md) for details.
 
 **Do not**:
 - Include full solutions in student-facing notebooks
-- Add heavy dependencies (keep installation simple for students)
+- Add dependencies that can't be installed via micropip (web VSCode compatibility)
 - Use network access in exercises or tests
 - Create exercises that require constructs students haven't learned
 - Use generic best practices that aren't specific to this codebase
@@ -138,3 +140,4 @@ See [Testing Framework](../docs/testing-framework.md) for details.
 - Use the scaffolding tools for consistency
 - Test both student and solution notebooks
 - Follow the existing patterns in the codebase
+- Update documentation when code changes

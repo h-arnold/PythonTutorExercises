@@ -282,33 +282,6 @@ Students write code from scratch.
 3. Student implements in tagged cell (with skeleton)
 4. Tests verify correctness
 
-## Pedagogical Constraints
-
-### Construct Progression
-
-Exercises must use only constructs students have already learned:
-
-1. Sequence (input, output, calculations)
-2. Selection (if/elif/else)
-3. Iteration (for, while loops)
-4. Data Types and Casting (int, float, str)
-5. Lists
-6. Dictionaries
-7. Functions and Procedures
-8. File Handling
-9. Exception Handling
-10. Using Python Libraries
-11. OOP (classes and objects)
-
-**Example**: An iteration exercise may use loops, arithmetic, and if statements, but must not require functions, file I/O, or classes.
-
-### Age-Appropriate Difficulty
-
-These exercises are for students aged 14-18 learning Python for the first time:
-- More explicit instructions than adult learners need
-- More scaffolding (provide function signatures, examples)
-- Gentler difficulty curve (exercises 1-3 should be very straightforward)
-
 ## Multi-Part Notebooks (10 exercises)
 
 When creating a notebook with `--parts 10`:

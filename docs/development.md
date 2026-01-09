@@ -190,96 +190,16 @@ Before submitting an exercise:
 - Tests solution notebooks
 - Validates instructor answers
 
-### Updating Python Version
-
-To update the minimum Python version:
-
-1. Update `pyproject.toml`:
-   ```toml
-   requires-python = ">=3.12"
-   ```
-
-2. Update workflows in `.github/workflows/*.yml`:
-   ```yaml
-   python-version: "3.12"
-   ```
-
-3. Update setup documentation in `docs/setup.md`
-
-4. Test locally with the new version:
-   ```bash
-   python3.12 -m venv .venv
-   source .venv/bin/activate
-   pip install -e ".[dev]"
-   pytest
-   ```
-
-## Dependency Management
-
-### Adding Dependencies
-
-To add a new dependency:
-
-1. **Evaluate necessity**: Can we avoid adding it?
-2. **Check license**: Must be compatible with project license
-3. **Add to `pyproject.toml`**:
-   ```toml
-   dependencies = [
-       "existing-package>=1.0",
-       "new-package>=2.0",
-   ]
-   ```
-
-4. **Document usage**: Update relevant docs
-5. **Test installation**: Fresh venv test
-   ```bash
-   python -m venv test_venv
-   source test_venv/bin/activate
-   pip install -e ".[dev]"
-   pytest
-   ```
-
-### Dev Dependencies
-
-Dev dependencies (pytest, ruff, jupyter) go in `[project.optional-dependencies]`:
-```toml
-[project.optional-dependencies]
-dev = [
-    "pytest>=8.0",
-    "ruff>=0.6",
-]
-```
-
-## Maintenance Tasks
-
-### Regular Maintenance
-
-**Monthly**:
-- Check for dependency updates
-- Review open issues and PRs
-- Test with latest Python patch version
-
-**Quarterly**:
-- Review and update documentation for accuracy
-- Audit exercise quality and consistency
-- Check CI/CD workflows still function
-
-**Annually**:
-- Update Python version support
-- Review pedagogical approach for curriculum changes
-- Conduct full repository audit
-
-### Updating Exercises
+## Updating Exercises
 
 When updating existing exercises:
 
 1. **Preserve exercise IDs**: Never change exNNN identifiers
 2. **Update both notebooks**: Student and solution
 3. **Update tests**: If behaviour changes
-4. **Document changes**: In commit message and PR description
-5. **Verify**: Run both student and solution tests
+4. **Verify**: Run both student and solution tests
 
-### Deprecating Exercises
+## Deprecating Exercises
 
 If an exercise needs to be removed:
 

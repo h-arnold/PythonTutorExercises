@@ -48,13 +48,15 @@ Resolves notebook paths with optional redirection via the `PYTUTOR_NOTEBOOKS_DIR
 - Student notebooks (default): `notebooks/exNNN_slug.ipynb`
 - Solution mirrors: `notebooks/solutions/exNNN_slug.ipynb`
 
+**Best practice**: Almost always test against the solution mirror first to ensure tests work correctly. Testing against student notebooks is primarily for GitHub Classroom autograding.
+
 **Usage**:
 ```bash
-# Test student notebooks
-pytest
-
-# Test solution notebooks
+# Test solution notebooks (recommended for development)
 PYTUTOR_NOTEBOOKS_DIR=notebooks/solutions pytest
+
+# Test student notebooks (for GitHub Classroom)
+pytest
 ```
 
 ## Writing Tests
@@ -94,7 +96,7 @@ def test_exercise_cells_run(tag: str):
 
 ### Testing Best Practices
 
-1. **Isolation**: Each tagged cell is executed in its own namespace. Tests should not assume state from previous cells.
+1. **Isolation**: Each tagged cell is executed in its own namespace. Tests should not assume state from previous cells. This is the default pattern but can be deviated from for multi-part exercises where later exercises build on earlier ones.
 
 2. **Speed**: Keep tests fast (< 1s each). Use small inputs and avoid expensive operations.
 
@@ -122,9 +124,11 @@ def test_exercise_cells_run(tag: str):
 
 ## Cell Tagging
 
-Students must tag their code cells in the notebook metadata. The tag must exactly match what tests expect.
+The `new_exercise.py` script automatically tags cells when generating notebooks. Students write their code in these pre-tagged cells.
 
-**Setting tags in Jupyter**:
+The tag must exactly match what tests expect (e.g., `exercise1`, `exercise2`).
+
+**Manually adding tags in Jupyter** (if needed):
 1. Select the code cell
 2. Open the property inspector (gear icon in the right sidebar)
 3. Add the tag (e.g., `exercise1`) under "Cell Tags"
