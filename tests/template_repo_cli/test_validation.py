@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 # Import will fail until we create the module - this is expected for TDD
 from scripts.template_repo_cli.utils.validation import (
     sanitize_repo_name,

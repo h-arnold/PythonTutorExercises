@@ -128,7 +128,7 @@ class GitHubClient:
         try:
             return json.loads(output)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON: {e}")
+            raise ValueError(f"Invalid JSON: {e}") from e
 
     def create_repository(
         self, repo_name: str, workspace: Path, push: bool = False

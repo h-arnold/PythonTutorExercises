@@ -7,7 +7,6 @@ import tempfile
 from pathlib import Path
 
 from scripts.template_repo_cli.utils.filesystem import (
-    create_directory_structure,
     safe_copy_directory,
     safe_copy_file,
 )
@@ -50,7 +49,7 @@ class TemplatePackager:
         """
         for exercise_id, file_dict in files.items():
             # Copy student notebook
-            if "notebook" in file_dict and file_dict["notebook"]:
+            if file_dict.get("notebook"):
                 dest = workspace / "notebooks" / f"{exercise_id}.ipynb"
                 safe_copy_file(file_dict["notebook"], dest)
             
@@ -60,12 +59,12 @@ class TemplatePackager:
                 safe_copy_file(file_dict["solution"], dest)
             
             # Copy test file
-            if "test" in file_dict and file_dict["test"]:
+            if file_dict.get("test"):
                 dest = workspace / "tests" / f"test_{exercise_id}.py"
                 safe_copy_file(file_dict["test"], dest)
             
             # Copy metadata if it exists
-            if "metadata" in file_dict and file_dict["metadata"]:
+            if file_dict.get("metadata"):
                 # Preserve structure: exercises/construct/type/exercise_id/README.md
                 # But for template, we can simplify to exercises/exercise_id/README.md
                 dest = workspace / "exercises" / exercise_id / "README.md"

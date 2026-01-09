@@ -225,7 +225,7 @@ class TestCreateRepository:
         (temp_dir / "README.md").write_text("Test")
 
         client = GitHubClient()
-        result = client.create_repository("test-repo", temp_dir, push=True)
+        client.create_repository("test-repo", temp_dir, push=True)
 
         # Should have called git commands
         assert mock_run.call_count >= 1
