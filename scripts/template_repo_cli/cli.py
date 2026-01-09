@@ -315,6 +315,10 @@ def _execute_template_creation(
         print(f"Error: {e}", file=sys.stderr)
         packager.cleanup(workspace)
         return 1
+    # Defensive catch-all to ensure the CLI exits cleanly on truly unexpected
+    # errors. Specific, anticipated exceptions are handled above; this block
+    # is only for unexpected failures and still exposes a traceback in verbose
+    # mode to aid debugging.
     except Exception as e:
         print(f"Unexpected error: {e}", file=sys.stderr)
         if args.verbose:
