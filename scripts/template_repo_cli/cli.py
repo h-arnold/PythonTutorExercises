@@ -100,6 +100,7 @@ def _handle_output_directory(workspace: Path, output_dir: str, packager: Templat
             shutil.rmtree(output_path)
         shutil.copytree(workspace, output_path)
     except Exception as copy_error:
+        traceback.print_exception(type(copy_error), copy_error, copy_error.__traceback__, file=sys.stderr)
         print(f"Error saving output to {output_path}: {copy_error}", file=sys.stderr)
         print(f"Workspace preserved at: {workspace}", file=sys.stderr)
         return 1
