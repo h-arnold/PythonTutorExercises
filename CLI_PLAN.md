@@ -95,7 +95,7 @@ exercises/
 scripts/
   template_repo_cli/
     __init__.py
-    cli.py              # Main entry point (argparse/click)
+    cli.py              # Main entry point (argparse)
     core/
       __init__.py
       selector.py       # Exercise selection logic
