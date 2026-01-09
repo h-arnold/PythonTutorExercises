@@ -44,13 +44,20 @@ To achieve the best possible understanding, students are given exercises the fol
  - Modfiy existing code to achieve something different
  - Make new code using the constructs to achieve something new.
 
- In all cases, excersises should start simple, requiring only single changes and then gradually increase in difficulty. 
+ In all cases, exercises should start simple, requiring only single changes and then gradually increase in difficulty. 
 
- A standard notebook consisting of 10 exercises will usually only contain one type of activity (debug, modify or make).
+ **Important context**: These exercises are designed for students aged 14-18 who are in school and learning Python for the first time. They will require more instruction, more scaffolding, and more practice than mature adult learners. Pace the difficulty accordingly—early exercises should be very explicit and forgiving, with complexity introduced in small, manageable increments.
+
+ A standard notebook consisting of 10 exercises will usually only contain one type of activity (debug, modify or make), with all 10 exercises in ONE notebook with 10 tagged cells (`exercise1` through `exercise10`).
 
  #### Debugging Exercise Formats
 
- Students should be presented with a mixture of syntactic and logical errors. Where possible, the bugs should be common or typical errors that beginners make when learning this structure. 
+ Students should be presented with a mixture of syntactic and logical errors. Where possible, the bugs should be common or typical errors that beginners make when learning this structure.
+
+ **Error count progression**: 
+ - Exercises 1-5: Each should contain exactly **one error** to help students build confidence and focus on a single issue at a time.
+ - Exercises 6-10: Gradually increase the number of errors where possible and appropriate to the task (e.g., exercise 6 might have 1-2 errors, exercise 10 might have 2-3).
+ - Errors should be **realistic** (what students would actually write) whenever possible. If realistic errors aren't appropriate for the learning objective, then use contrived errors that serve the pedagogical goal. 
 
  **Common syntactic and logical errors (examples)**
 
@@ -273,10 +280,12 @@ Below is a JSON-formatted example that matches the notebook format used by the g
 ```
 
 #### Notes on crafting exercises for all problem types.
-- The graded cell must include the tag `exercise1` in `metadata.tags`.
+- The graded cell must include the tag `exercise1` (or `exercise2`, etc.) in `metadata.tags`.
 - Each cell object includes `metadata.language` set to `python` or `markdown` to match our validator.
-- Student code should expose a small, pure function and include a clear docstring and example.
+- Student code should expose a small, pure function.
+- Before the Functions construct is taught, avoid requiring docstrings; after Functions, include clear docstrings with examples.
 - Tests will use `exec_tagged_code("notebooks/exNNN_slug.ipynb", tag="exercise1")` to extract and run the tagged cell.
+- **Namespace isolation**: By default, each tagged cell is executed in isolation. If an exercise explicitly builds on previous exercises (e.g., exercise2 extends exercise1), state this clearly in the notebook instructions and design tests accordingly.
 
 ## Creating exercises - the process
 
@@ -289,8 +298,15 @@ Below is a JSON-formatted example that matches the notebook format used by the g
     - `python scripts/new_exercise.py exNNN "Title" --slug your_slug --parts N`
 
 This creates:
+  - `exercises/CONSTRUCT/TYPE/exNNN_slug/README.md` (where CONSTRUCT is sequence, selection, iteration, etc. and TYPE is debug, modify, or make)
+  - `notebooks/exNNN_slug.ipynb`
+  - `tests/test_exNNN_slug.py`
 
-Note: The generator provides a minimal starting notebook and tests. You should edit the notebook to add prompt text, examples, and the single `student`-tagged code cell where learners will write their solution.
+**Important**: Exercises are created directly in the main branch. The folder structure under `exercises/` must follow the pattern `CONSTRUCT/TYPE/exNNN_slug/` where:
+- CONSTRUCT is one of: `sequence`, `selection`, `iteration`, `data_types`, `lists`, `dictionaries`, `functions`, `file_handling`, `exceptions`, `libraries`, `oop`
+- TYPE is one of: `debug`, `modify`, `make`
+
+Note: The generator provides a minimal starting notebook and tests. You should edit the notebook to add prompt text, examples, and the code cell(s) tagged `exercise1`, `exercise2`, etc. where learners will write their solution(s).
 
 3) Author the notebook
 - Keep a clear structure:
@@ -299,11 +315,15 @@ Note: The generator provides a minimal starting notebook and tests. You should e
   - One graded cell per exercise part
   - Optional self-check / exploration cell
 
-Graded cell rules
+Graded cell rules:
+- Must be tagged with `exercise1`, `exercise2`, etc. (exact match in `metadata.tags`)
+- Should define a small, focused function (typically `solve()` for consistency)
+- Include docstrings **only after the Functions construct is taught**; before that, keep code simple
+- Keep the cell small (10–20 lines) and focused on a single learning objective
 
 Additional guidance:
 - Make each graded cell small (10–20 lines) and focused on a single learning objective.
-- Include a docstring on the target function describing parameters, return values, and an example.
+- Before the Functions construct is taught, omit docstrings; after Functions, include a docstring on the target function describing parameters, return values, and an example.
 - Keep the cell's variable and function names consistent with the test expectations (the scaffold expects `solve()` unless you update the tests).
 
 Notebook formatting requirements
@@ -322,9 +342,12 @@ Metadata tips:
   - `ns = exec_tagged_code("notebooks/exNNN_slug.ipynb", tag="exercise1")`
   - Assert required function exists, then assert correctness on multiple cases.
 
-Test design checklist
-
-Testing recommendations:
+Test design checklist:
+- At least 3 positive tests covering typical cases
+- At least 2 edge cases (e.g., empty lists, zero, negative numbers, single items, boundary values)
+  - **If unsure what edge cases are appropriate**, ask the teacher for clarification
+- At least 1 invalid/wrong-type test where appropriate
+- Fast (<1s per test) and deterministic (no randomness, no time-based behavior)
 - Use `pytest.mark.parametrize` to group related input/output pairs and keep the test file concise.
 - Keep test inputs small and deterministic (no random seeds or time-based tests).
 - Avoid executing the whole notebook; use `exec_tagged_code` to extract and run the single graded cell to keep CI fast and isolated.
@@ -344,7 +367,7 @@ If tests fail locally, update only the tests or notebook relevant to the exercis
 - When the teacher requests a notebook with 10 exercises, use `--parts 10`:
   - `python scripts/new_exercise.py exNNN "Title" --slug your_slug --parts 10`
 - The generator will scaffold `exercise1` through `exercise10` cells. Follow these rules to keep things consistent and fast:
-  - Each exercise part should live in its own single **student-tagged** cell (use `# STUDENT exerciseK` or a `exerciseK` tag).
+  - Each exercise part should live in its own single tagged cell (`exercise1`, `exercise2`, etc.).
   - Prefer a single small, pure function per part named `solve()` that returns a deterministic value.
   - Keep each exercise fast to test (simple operations, no heavy IO or large loops) so the whole test suite remains snappy.
 
@@ -395,7 +418,7 @@ Multi-part notebook tips:
 - Clearly document each exercise prompt in the notebook so students know which `exerciseK` they are solving.
 
 ## Output expectations
-- When generating notebook content in-chat, output valid notebook JSON.
+- When generating notebook content in-chat, use the XML cell format (`<VSCode.Cell language="python">...</VSCode.Cell>`).
 - Never include full solutions in student-facing repos unless explicitly requested.
 
 ## Small examples and quick references

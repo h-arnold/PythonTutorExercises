@@ -19,10 +19,9 @@ The repo is organized so students work in Jupyter notebooks, but **grading is do
 - `tests/`
   - `tests/test_exNNN_slug.py` contains automated tests.
 - `scripts/new_exercise.py` generates skeletons.
-
-Optional:
 - `exercises/`
-  - One folder per exercise: `exercises/exNNN_slug/README.md` (teacher notes + prompt)
+  - Folder structure: `exercises/CONSTRUCT/{debug,modify,make}/exNNN_slug/README.md`
+  - Where CONSTRUCT is one of: sequence, selection, iteration, data_types, lists, dictionaries, functions, file_handling, exceptions, libraries, oop
 
 ## When asked to "create a new exercise"
 1. Choose the next ID (ex001, ex002, …) and a short snake-case slug.
@@ -45,16 +44,17 @@ Optional:
   - at least 3 positive tests
   - at least 2 edge cases
   - one "wrong type" or "invalid value" case if appropriate
-- Prefer **Option A** grading: extract + `exec()` the `student` cell (see `tests/notebook_grader.py`).
+- Grading: extract + `exec()` cells tagged `exercise1`, `exercise2`, etc. (see `tests/notebook_grader.py`).
 - Avoid executing entire notebooks in CI unless explicitly requested.
 
 ## Notebook rules
 - Notebook should:
   - explain the goal
   - show 1–2 examples
-  - include one `student`-tagged cell where students write their solution
+  - include cells tagged `exercise1`, `exercise2`, etc. where students write their solutions
   - optionally include a non-graded self-check cell
 - Keep notebook outputs minimal.
+- Multi-part notebooks (e.g., 10 exercises) should have all parts in ONE notebook with multiple tagged cells (`exercise1` through `exercise10`).
 
 ## Do not do
 - Do not include full solutions in student repos.
