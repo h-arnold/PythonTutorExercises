@@ -5,7 +5,7 @@ description = "Python exercises with automated testing"
 readme = "README.md"
 requires-python = ">=3.11"
 
-# All dependencies must be micropip-compatible for VS Code for the Web
+# All dependencies must be installable via micropip in VS Code for the Web
 # See: https://pyodide.org/en/stable/usage/packages-in-pyodide.html
 dependencies = []
 
