@@ -182,11 +182,42 @@ class TemplatePackager:
         
         return True
 
+    def _is_safe_workspace(self, workspace: Path) -> bool:
+        """Check whether the given path looks like a valid temporary workspace.
+        
+        A safe workspace is:
+        - Located inside the system temporary directory, and
+        - Has the expected prefix used by create_workspace(), and
+        - Is an existing directory.
+        """
+        # Normalize and resolve paths to avoid traversal tricks.
+        workspace_path = Path(workspace).resolve()
+        temp_root = Path(tempfile.gettempdir()).resolve()
+
+        try:
+            workspace_path.relative_to(temp_root)
+        except ValueError:
+            # Workspace is not inside the system temp directory.
+            return False
+
+        if not workspace_path.name.startswith("template_repo_"):
+            return False
+
+        return workspace_path.is_dir()
+
     def cleanup(self, workspace: Path) -> None:
         """Clean up workspace.
         
         Args:
             workspace: Workspace directory to remove.
         """
-        if workspace.exists():
-            shutil.rmtree(workspace)
+        workspace_path = Path(workspace)
+
+        # Only remove directories that look like workspaces created by
+        # create_workspace(). This helps prevent accidental deletion of
+        # important non-temporary directories.
+        if not self._is_safe_workspace(workspace_path):
+            return
+
+        if workspace_path.exists():
+            shutil.rmtree(workspace_path)
