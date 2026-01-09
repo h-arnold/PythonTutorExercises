@@ -58,3 +58,7 @@ And (optional):
 - The notebook is for explanation and scratch work.
 - Grading is driven by `pytest` (see `.github/workflows/tests.yml`).
 
+## Copilot authoring mode
+
+- See `.github/prompts/exercise_generation.chatmode.md` for a “chat mode” style guide you can use while generating new exercises.
+

@@ -9,6 +9,9 @@ The repo is organized so students work in Jupyter notebooks, but **grading is do
 - Keep grading deterministic via `pytest`.
 - Put checks in **tests/**.
 
+## Authoring help
+- Use the repository chat mode prompt in `.github/prompts/exercise_generation.chatmode.md` to generate consistent notebook + tests.
+
 ## Repository layout (must follow)
 - `notebooks/`
   - One notebook per exercise: `notebooks/exNNN_slug.ipynb`
