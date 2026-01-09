@@ -143,9 +143,14 @@ def create_command(args: argparse.Namespace) -> int:
             # Copy to output directory instead of cleaning up
             import shutil
             output_path = Path(args.output_dir)
-            if output_path.exists():
-                shutil.rmtree(output_path)
-            shutil.copytree(workspace, output_path)
+            try:
+                if output_path.exists():
+                    shutil.rmtree(output_path)
+                shutil.copytree(workspace, output_path)
+            except Exception as copy_error:
+                print(f"Error saving output to {output_path}: {copy_error}", file=sys.stderr)
+                print(f"Workspace preserved at: {workspace}", file=sys.stderr)
+                return 1
             packager.cleanup(workspace)
             print(f"Output saved to: {output_path}")
         
