@@ -3,6 +3,7 @@
 
 Usage:
   python scripts/new_exercise.py ex001 "Variables and Types" --slug variables_and_types
+    python scripts/new_exercise.py ex010 "Week 1" --slug week1 --parts 3
 
 This creates:
   exercises/ex001_variables_and_types/README.md
@@ -35,53 +36,99 @@ def _slugify(text: str) -> str:
 def _make_notebook(title: str) -> dict:
     """Return a minimal .ipynb JSON object."""
 
+    # NOTE: This intentionally includes per-cell metadata.language to match repo conventions.
+    return _make_notebook_with_parts(title, parts=1)
+
+
+def _make_notebook_with_parts(title: str, *, parts: int) -> dict:
+    if parts < 1:
+        raise ValueError("parts must be >= 1")
+
     def _meta(language: str, *, tags: list[str] | None = None) -> dict:
         meta: dict[str, object] = {"id": uuid.uuid4().hex[:8], "language": language}
         if tags:
             meta["tags"] = tags
         return meta
 
-    # NOTE: This intentionally includes per-cell metadata.language to match repo conventions.
-    return {
-        "cells": [
-            {
-                "cell_type": "markdown",
-                "metadata": _meta("markdown"),
-                "source": [
-                    f"# {title}\n",
-                    "\n",
-                    "## Goal\n",
-                    "Write your solution in the **student** cell, then run the tests.\n",
-                    "\n",
-                    "## How to work\n",
-                    "- Run `pytest -q`\n",
-                ],
-            },
+    cells: list[dict] = [
+        {
+            "cell_type": "markdown",
+            "metadata": _meta("markdown"),
+            "source": [
+                f"# {title}\n",
+                "\n",
+                "## Goal\n",
+                "Complete each exercise cell, then run the tests.\n",
+                "\n",
+                "## How to work\n",
+                "- Write your solution(s) in the exercise cell(s)\n",
+                "- Run `pytest -q`\n",
+            ],
+        }
+    ]
+
+    if parts == 1:
+        tag = "student"
+        cells.append(
             {
                 "cell_type": "code",
-                "metadata": _meta("python", tags=["student"]),
+                "metadata": _meta("python", tags=[tag]),
                 "execution_count": None,
                 "outputs": [],
                 "source": [
-                    "# STUDENT CELL (graded)\n",
+                    "# STUDENT\n",
                     "# The tests will execute the code in this cell.\n",
                     "\n",
-                    "def example() -> str:\n",
-                    "    \"\"\"Return a non-empty string.\"\"\"\n",
-                    "    return \"TODO\"\n",
+                    "def solve() -> object:\n",
+                    "    \"\"\"Return the correct result for the exercise.\"\"\"\n",
+                    "    return 'TODO'\n",
                 ],
-            },
-            {
-                "cell_type": "code",
-                "metadata": _meta("python"),
-                "execution_count": None,
-                "outputs": [],
-                "source": [
-                    "# Optional self-check (not graded)\n",
-                    "print(example())\n",
-                ],
-            },
-        ],
+            }
+        )
+    else:
+        for i in range(1, parts + 1):
+            tag = f"exercise{i}"
+            cells.append(
+                {
+                    "cell_type": "markdown",
+                    "metadata": _meta("markdown"),
+                    "source": [
+                        f"## Exercise {i}\n",
+                        "(Write the prompt here.)\n",
+                    ],
+                }
+            )
+            cells.append(
+                {
+                    "cell_type": "code",
+                    "metadata": _meta("python", tags=[tag]),
+                    "execution_count": None,
+                    "outputs": [],
+                    "source": [
+                        f"# STUDENT {tag}\n",
+                        "# The tests will execute the code in this cell.\n",
+                        "def solve() -> object:\n",
+                        "    \"\"\"Return the correct result for this exercise.\"\"\"\n",
+                        "    return 'TODO'\n",
+                    ],
+                }
+            )
+
+    cells.append(
+        {
+            "cell_type": "code",
+            "metadata": _meta("python"),
+            "execution_count": None,
+            "outputs": [],
+            "source": [
+                "# Optional self-check (not graded)\n",
+                "# You can run small experiments here.\n",
+            ],
+        }
+    )
+
+    return {
+        "cells": cells,
         "metadata": {
             "kernelspec": {
                 "display_name": "Python 3",
@@ -104,7 +151,18 @@ def main() -> int:
         help="Optional slug (snake_case). Defaults to slugified title.",
         default=None,
     )
+    parser.add_argument(
+        "--parts",
+        type=int,
+        default=1,
+        help="How many graded exercise cells to scaffold in the notebook (default: 1).",
+    )
     args = parser.parse_args()
+
+    if args.parts < 1:
+        raise SystemExit("--parts must be >= 1")
+    if args.parts > 20:
+        raise SystemExit("--parts is capped at 20 to keep notebooks manageable")
 
     ex_id = args.id.strip().lower()
     if not re.fullmatch(r"ex\d{3}", ex_id):
@@ -136,7 +194,7 @@ def main() -> int:
                 "",
                 "## Student prompt",
                 "- Open the matching notebook in `notebooks/`.",
-                "- Write your solution in the notebook cell tagged `student`.",
+                "- Write your solution in the notebook cell tagged `student` (or `exercise1`, `exercise2`, …).",
                 "- Run `pytest -q` until all tests pass.",
                 "",
                 "## Teacher notes",
@@ -148,27 +206,43 @@ def main() -> int:
         encoding="utf-8",
     )
 
-    test_path.write_text(
-        "\n".join(
-            [
-                "from __future__ import annotations",
-                "",
-                "from tests.notebook_grader import exec_tagged_code",
-                "",
-                "",
-                "def test_example_returns_string() -> None:",
-                f"    ns = exec_tagged_code('notebooks/{exercise_key}.ipynb', tag='student')",
-                "    assert 'example' in ns",
-                "    result = ns['example']()",
-                "    assert isinstance(result, str)",
-                "    assert result != \"\"",
-                "",
-            ]
-        ),
-        encoding="utf-8",
-    )
+    test_lines: list[str] = [
+        "from __future__ import annotations",
+        "",
+        "import pytest",
+        "",
+        "from tests.notebook_grader import exec_tagged_code",
+        "",
+        "",
+        "def _run(tag: str):",
+        f"    ns = exec_tagged_code('notebooks/{exercise_key}.ipynb', tag=tag)",
+        "    assert 'solve' in ns, 'Student cell must define solve()'",
+        "    result = ns['solve']()",
+        "    # Placeholder guard: student must change the scaffold",
+        "    assert result != 'TODO'",
+        "    return result",
+        "",
+        "",
+    ]
 
-    notebook = _make_notebook(args.title)
+    if args.parts == 1:
+        test_lines += [
+            "def test_student_cell_runs() -> None:",
+            "    _run('student')",
+            "",
+        ]
+    else:
+        tags = ", ".join([f"'exercise{i}'" for i in range(1, args.parts + 1)])
+        test_lines += [
+            f"@pytest.mark.parametrize('tag', [{tags}])",
+            "def test_exercise_cells_run(tag: str) -> None:",
+            "    _run(tag)",
+            "",
+        ]
+
+    test_path.write_text("\n".join(test_lines), encoding="utf-8")
+
+    notebook = _make_notebook_with_parts(args.title, parts=args.parts)
     nb_path.write_text(json.dumps(notebook, indent=2), encoding="utf-8")
 
     print(f"Created exercise: {exercise_key}")

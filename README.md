@@ -6,7 +6,7 @@ Notebook-based Python exercises with automated grading via `pytest` (GitHub Clas
 
 - `notebooks/`
 	- One notebook per exercise: `notebooks/exNNN_slug.ipynb`
-	- Students write code **inline** in a dedicated student cell (tagged `student` or starting with `# STUDENT`)
+	- Students write code **inline** in a dedicated exercise cell (tagged, e.g. `student` or `exercise1`, or starting with `# STUDENT` / `# STUDENT exercise1`)
 - `tests/`
 	- `tests/test_exNNN_slug.py` contains automated tests
 	- Tests extract + execute the student cell (see `tests/notebook_grader.py`)
@@ -38,6 +38,12 @@ pytest -q
 
 ```bash
 python scripts/new_exercise.py ex001 "Variables and Types" --slug variables_and_types
+```
+
+Multiple exercises in one notebook:
+
+```bash
+python scripts/new_exercise.py ex010 "Week 1" --slug week1 --parts 3
 ```
 
 This creates:

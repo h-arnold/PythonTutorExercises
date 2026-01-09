@@ -12,7 +12,7 @@ The repo is organized so students work in Jupyter notebooks, but **grading is do
 ## Repository layout (must follow)
 - `notebooks/`
   - One notebook per exercise: `notebooks/exNNN_slug.ipynb`
-  - Students write their solution in a dedicated student cell (tagged `student` or starting with `# STUDENT`)
+  - Students write their solution in a dedicated exercise cell (tagged `student`/`exercise1`/`exercise2`… or starting with `# STUDENT` / `# STUDENT exercise1`)
 - `tests/`
   - `tests/test_exNNN_slug.py` contains automated tests.
 - `scripts/new_exercise.py` generates skeletons.
@@ -25,7 +25,7 @@ Optional:
 1. Choose the next ID (ex001, ex002, …) and a short snake-case slug.
 2. Use / extend `scripts/new_exercise.py` output rather than ad-hoc files.
 3. Ensure the notebook includes a **single** code cell tagged `student`.
-4. Tests should read `notebooks/exNNN_slug.ipynb`, extract the student cell (tagged or `# STUDENT` marker), execute it, and assert on the defined functions/variables.
+4. Tests should read `notebooks/exNNN_slug.ipynb`, extract the target cell by tag/marker (e.g. `student` or `exercise1`), execute it, and assert on the defined functions/variables.
 5. Update `README.md` index table with the new exercise.
 
 ## Exercise design rules
