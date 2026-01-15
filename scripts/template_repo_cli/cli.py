@@ -140,6 +140,22 @@ def _is_integration_permission_error(error: str | None) -> bool:
     )
 
 
+def _github_already_exists_hint(error: str | None, repo_name: str) -> str | None:
+    """Return actionable hint for 'repository already exists' errors."""
+
+    if not error:
+        return None
+
+    message = error.lower()
+    if "name already exists" in message or "already exists" in message:
+        return (
+            f"A repository named '{repo_name}' already exists. "
+            "Either delete the existing repository or choose a different name."
+        )
+
+    return None
+
+
 def _offer_unset_token_and_reauth(env_key: str) -> bool:
     """Prompt user to unset token env var and re-run `gh auth login`."""
 
@@ -261,7 +277,12 @@ def _create_github_repo(
             return True, None
 
         error_msg = result.get("error") or "Unknown error"
-        hint = _github_permission_hint(error_msg)
+        
+        # Check for permission errors
+        permission_hint = _github_permission_hint(error_msg)
+        
+        # Check for "already exists" errors
+        exists_hint = _github_already_exists_hint(error_msg, args.repo_name)
 
         if (
             env_key
@@ -273,8 +294,11 @@ def _create_github_repo(
             env_key = _detect_auth_token_env()
             continue
 
-        if hint:
-            error_msg = f"{error_msg} {hint}"
+        # Add hints to error message
+        if permission_hint:
+            error_msg = f"{error_msg}\n\n{permission_hint}"
+        elif exists_hint:
+            error_msg = f"{error_msg}\n\n{exists_hint}"
 
         return False, error_msg
 
