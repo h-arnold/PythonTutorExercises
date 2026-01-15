@@ -132,7 +132,15 @@ class GitHubClient:
             raise ValueError(f"Invalid JSON: {e}") from e
 
     def create_repository(
-        self, repo_name: str, workspace: Path, push: bool = False
+        self,
+        repo_name: str,
+        workspace: Path,
+        *,
+        public: bool = True,
+        template: bool = True,
+        org: str | None = None,
+        description: str | None = None,
+        push: bool = False,
     ) -> dict[str, Any]:
         """Create a GitHub repository.
         
@@ -152,7 +160,13 @@ class GitHubClient:
             }
         
         # Build create command
-        cmd = self.build_create_command(repo_name)
+        cmd = self.build_create_command(
+            repo_name,
+            public=public,
+            template=template,
+            org=org,
+            description=description,
+        )
         
         # Execute command
         result = self.execute_command(cmd)

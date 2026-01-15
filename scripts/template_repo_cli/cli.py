@@ -13,6 +13,10 @@ from scripts.template_repo_cli.core.collector import FileCollector
 from scripts.template_repo_cli.core.github import GitHubClient
 from scripts.template_repo_cli.core.packager import TemplatePackager
 from scripts.template_repo_cli.core.selector import ExerciseSelector
+from scripts.template_repo_cli.utils.validation import (
+    sanitize_repo_name,
+    validate_repo_name,
+)
 
 
 def get_repo_root() -> Path:
@@ -159,16 +163,19 @@ def _create_github_repo(
     Returns:
         Tuple of (success, error_message).
     """
-    if args.dry_run:
-        print(f"[DRY RUN] Would create repository: {args.repo_name}")
-        print(f"[DRY RUN] Workspace: {workspace}")
-        return True, None
-    
     error_msg = _check_github_prerequisites(github)
     if error_msg:
         return False, error_msg
     
-    result = github.create_repository(args.repo_name, workspace, push=False)
+    result = github.create_repository(
+        args.repo_name,
+        workspace,
+        public=not args.private,
+        template=True,
+        org=args.org,
+        description=args.name,
+        push=False,
+    )
     
     if result["success"]:
         print(f"✓ Created repository: {args.repo_name}")
@@ -337,6 +344,14 @@ def create_command(args: argparse.Namespace) -> int:
         Exit code (0 for success).
     """
     repo_root = get_repo_root()
+
+    if not validate_repo_name(args.repo_name):
+        suggestion = sanitize_repo_name(args.repo_name)
+        message = f"Invalid repo name: {args.repo_name!r}."
+        if suggestion:
+            message += f" Suggested: {suggestion!r}."
+        print(message, file=sys.stderr)
+        return 1
     
     if args.verbose:
         print(f"Repository root: {repo_root}")
@@ -374,10 +389,15 @@ def list_command(args: argparse.Namespace) -> int:
     selector = ExerciseSelector(repo_root)
     
     # Get exercises based on filters
-    if args.construct:
+    if args.construct and args.type:
+        exercises = selector.select_by_construct_and_type(
+            [args.construct], [args.type]
+        )
+    elif args.construct:
         exercises = selector.select_by_construct([args.construct])
+    elif args.type:
+        exercises = selector.select_by_type([args.type])
     else:
-        # List all exercises
         exercises = selector.get_all_notebooks()
     
     # Print exercises
@@ -410,6 +430,8 @@ def _select_exercises_for_validation(
     Raises:
         ValueError: If invalid selection criteria or no criteria provided.
     """
+    if args.notebooks:
+        return _select_by_notebooks(args, selector)
     if args.construct and args.type:
         return selector.select_by_construct_and_type(args.construct, args.type)
     elif args.construct:
@@ -417,7 +439,7 @@ def _select_exercises_for_validation(
     elif args.type:
         return selector.select_by_type(args.type)
     else:
-        raise ValueError("Must specify --construct or --type")
+        raise ValueError("Must specify --construct, --type, or --notebooks")
 
 
 def validate_command(args: argparse.Namespace) -> int:
@@ -530,6 +552,9 @@ def main(argv: list[str] | None = None) -> int:
     validate_parser = subparsers.add_parser("validate", help="Validate selection")
     validate_parser.add_argument("--construct", nargs="+", help="Filter by construct")
     validate_parser.add_argument("--type", nargs="+", help="Filter by type")
+    validate_parser.add_argument(
+        "--notebooks", nargs="+", help="Specific notebook patterns"
+    )
     
     # Parse arguments
     args = parser.parse_args(argv)
