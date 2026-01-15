@@ -209,9 +209,34 @@ class GitHubClient:
     def mark_repository_as_template(
         self, repo_name: str, org: str | None = None
     ) -> dict[str, Any]:
-        """Mark an existing repository as a template."""
-
-        repo_ref = f"{org}/{repo_name}" if org else repo_name
+        """Mark an existing repository as a template.
+        
+        Args:
+            repo_name: Repository name.
+            org: Organization name (if None, uses authenticated user).
+            
+        Returns:
+            Result dictionary.
+        """
+        # If no org specified, get the authenticated user
+        if org:
+            repo_ref = f"{org}/{repo_name}"
+        else:
+            # Get authenticated user
+            user_result = subprocess.run(
+                ["gh", "api", "user", "--jq", ".login"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if user_result.returncode != 0:
+                return {
+                    "success": False,
+                    "error": f"Failed to get authenticated user: {user_result.stderr}",
+                }
+            username = user_result.stdout.strip()
+            repo_ref = f"{username}/{repo_name}"
+        
         cmd = ["gh", "repo", "edit", repo_ref, "--template"]
         return self.execute_command(cmd)
 
