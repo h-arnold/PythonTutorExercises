@@ -26,6 +26,7 @@ class GitHubClient:
         template_repo: str | None = None,
         org: str | None = None,
         description: str | None = None,
+        source_path: str | None = None,
     ) -> list[str]:
         """Build gh repo create command.
         
@@ -36,6 +37,7 @@ class GitHubClient:
                 to the --template flag used to clone from an existing template.
             org: Organization name (if creating in org).
             description: Repository description.
+            source_path: Path to local source directory to push to the repository.
             
         Returns:
             Command as list of strings.
@@ -61,6 +63,10 @@ class GitHubClient:
         # Add description if provided
         if description:
             cmd.extend(["--description", description])
+        
+        # Add source path and push flag if source is provided
+        if source_path:
+            cmd.extend(["--source", source_path, "--push"])
         
         return cmd
 
@@ -115,6 +121,71 @@ class GitHubClient:
         except FileNotFoundError:
             return False
 
+    def check_scopes(self, required_scopes: list[str] | None = None) -> dict[str, Any]:
+        """Check if current authentication has required scopes.
+        
+        Args:
+            required_scopes: List of required scopes (e.g., ['repo']). 
+                If None, defaults to ['repo'].
+        
+        Returns:
+            Dictionary with:
+                - 'authenticated': bool, whether authenticated at all
+                - 'has_scopes': bool, whether all required scopes are present
+                - 'scopes': list of strings, current scopes (empty if not authenticated)
+                - 'missing_scopes': list of strings, scopes that are missing
+        """
+        if required_scopes is None:
+            required_scopes = ["repo"]
+        
+        result = {
+            "authenticated": False,
+            "has_scopes": False,
+            "scopes": [],
+            "missing_scopes": required_scopes.copy(),
+        }
+        
+        try:
+            # Run gh auth status and capture stderr (where scopes are printed)
+            auth_result = subprocess.run(
+                ["gh", "auth", "status"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            
+            # Check if authenticated
+            if auth_result.returncode != 0:
+                return result
+            
+            result["authenticated"] = True
+            
+            # Parse stderr to extract scopes
+            # Format: "  - Token scopes: 'scope1', 'scope2', 'scope3'"
+            output = auth_result.stderr + auth_result.stdout
+            for line in output.split("\n"):
+                if "Token scopes:" in line:
+                    # Extract the scopes part after "Token scopes:"
+                    scopes_part = line.split("Token scopes:", 1)[1].strip()
+                    # Remove quotes and split by comma
+                    scopes = [
+                        s.strip().strip("'").strip('"')
+                        for s in scopes_part.split(",")
+                        if s.strip()
+                    ]
+                    result["scopes"] = scopes
+                    break
+            
+            # Check if all required scopes are present
+            missing = [s for s in required_scopes if s not in result["scopes"]]
+            result["missing_scopes"] = missing
+            result["has_scopes"] = len(missing) == 0
+            
+            return result
+            
+        except OSError:
+            return result
+
     def parse_json_output(self, output: str) -> dict[str, Any]:
         """Parse JSON output from gh.
         
@@ -142,19 +213,19 @@ class GitHubClient:
         template_repo: str | None = None,
         org: str | None = None,
         description: str | None = None,
-        push: bool = False,
+        skip_git_operations: bool = False,
     ) -> dict[str, Any]:
         """Create a GitHub repository.
         
         Args:
             repo_name: Repository name.
-            workspace: Workspace directory.
+            workspace: Workspace directory containing files to push.
             public: Whether repository should be public.
             template: Whether to mark the repository as a template after creation.
             template_repo: Optional template repository to base the new repository on.
             org: Organization name to create the repository in.
             description: Repository description used for gh command.
-            push: Whether to push initial commit.
+            skip_git_operations: Skip git init/commit (for retries).
             
         Returns:
             Result dictionary.
@@ -166,16 +237,25 @@ class GitHubClient:
                 "message": "Dry run - no repository created",
             }
         
-        # Build create command
+        # Only do git operations on first attempt
+        if not skip_git_operations:
+            # Initialize git repository in workspace (required for --source flag)
+            self.init_git_repo(workspace)
+            
+            # Commit files (required for --push flag)
+            self.commit_files(workspace, "Initial commit")
+        
+        # Build create command with workspace as source
         cmd = self.build_create_command(
             repo_name,
             public=public,
             template_repo=template_repo,
             org=org,
             description=description,
+            source_path=str(workspace),
         )
         
-        # Execute command
+        # Execute command (this will create repo and push files)
         result = self.execute_command(cmd)
         
         # Mark repository as a template if requested
@@ -188,22 +268,40 @@ class GitHubClient:
                     "output": template_result.get("output"),
                     "returncode": template_result.get("returncode"),
                 }
-
-        # If push requested and creation successful
-        if push and result["success"]:
-            # Initialize git, commit, and push
-            self.init_git_repo(workspace)
-            self.commit_files(workspace, "Initial commit")
-            # Push would require knowing the remote URL
         
         return result
 
     def mark_repository_as_template(
         self, repo_name: str, org: str | None = None
     ) -> dict[str, Any]:
-        """Mark an existing repository as a template."""
-
-        repo_ref = f"{org}/{repo_name}" if org else repo_name
+        """Mark an existing repository as a template.
+        
+        Args:
+            repo_name: Repository name.
+            org: Organization name (if None, uses authenticated user).
+            
+        Returns:
+            Result dictionary.
+        """
+        # If no org specified, get the authenticated user
+        if org:
+            repo_ref = f"{org}/{repo_name}"
+        else:
+            # Get authenticated user
+            user_result = subprocess.run(
+                ["gh", "api", "user", "--jq", ".login"],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            if user_result.returncode != 0:
+                return {
+                    "success": False,
+                    "error": f"Failed to get authenticated user: {user_result.stderr}",
+                }
+            username = user_result.stdout.strip()
+            repo_ref = f"{username}/{repo_name}"
+        
         cmd = ["gh", "repo", "edit", repo_ref, "--template"]
         return self.execute_command(cmd)
 
@@ -225,43 +323,64 @@ class GitHubClient:
             message: Commit message.
             
         Raises:
-            RuntimeError: If git user configuration is missing.
+            RuntimeError: If git user configuration is missing or commit fails.
         """
-        # Check if git is configured
+        # Check if git is configured globally
         user_name = subprocess.run(
-            ["git", "config", "user.name"],
-            cwd=workspace,
+            ["git", "config", "--global", "user.name"],
             capture_output=True,
             text=True,
             check=False,
         )
         user_email = subprocess.run(
-            ["git", "config", "user.email"],
-            cwd=workspace,
+            ["git", "config", "--global", "user.email"],
             capture_output=True,
             text=True,
             check=False,
         )
         
-        if not user_name.stdout.strip() or not user_email.stdout.strip():
-            raise RuntimeError(
-                "Git user configuration is missing. "
-                "Please configure git with 'git config --global user.name' "
-                "and 'git config --global user.email'"
+        # If global config is missing, set local config in workspace
+        if not user_name.stdout.strip():
+            subprocess.run(
+                ["git", "config", "user.name", "Template CLI"],
+                cwd=workspace,
+                capture_output=True,
+                check=True,
+            )
+        
+        if not user_email.stdout.strip():
+            subprocess.run(
+                ["git", "config", "user.email", "template-cli@example.com"],
+                cwd=workspace,
+                capture_output=True,
+                check=True,
             )
         
         # Add all files
-        subprocess.run(
-            ["git", "add", "."], cwd=workspace, capture_output=True, check=True
+        add_result = subprocess.run(
+            ["git", "add", "."], 
+            cwd=workspace, 
+            capture_output=True, 
+            text=True,
+            check=False,
         )
+        if add_result.returncode != 0:
+            raise RuntimeError(
+                f"git add failed:\n{add_result.stderr}"
+            )
         
         # Commit
-        subprocess.run(
+        commit_result = subprocess.run(
             ["git", "commit", "-m", message],
             cwd=workspace,
             capture_output=True,
-            check=True,
+            text=True,
+            check=False,
         )
+        if commit_result.returncode != 0:
+            raise RuntimeError(
+                f"git commit failed:\nstdout: {commit_result.stdout}\nstderr: {commit_result.stderr}"
+            )
 
     def push_to_remote(self, workspace: Path, remote_url: str) -> None:
         """Push to remote.

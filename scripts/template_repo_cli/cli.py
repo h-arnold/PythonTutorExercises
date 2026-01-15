@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
 import shutil
+import subprocess
 import sys
 import traceback
 from pathlib import Path
@@ -83,8 +83,18 @@ def _check_github_prerequisites(github: GitHubClient) -> str | None:
     if not github.check_gh_installed():
         return "gh CLI not installed. Please install it from https://cli.github.com/"
     
-    if not github.check_authentication():
+    # Check authentication and scopes
+    scope_check = github.check_scopes(["repo"])
+    
+    if not scope_check["authenticated"]:
         return "Not authenticated with GitHub. Run 'gh auth login' first."
+    
+    if not scope_check["has_scopes"]:
+        missing = ", ".join(scope_check["missing_scopes"])
+        return (
+            f"Current GitHub authentication is missing required scopes: {missing}. "
+            f"Run 'gh auth refresh -s repo' to add the required scopes."
+        )
     
     return None
 
@@ -237,6 +247,33 @@ def _build_template_package(
     return True
 
 
+def _should_retry_with_reauth(
+    github: GitHubClient,
+    error_msg: str,
+    env_key: str | None,
+    already_reauthenticated: bool,
+) -> bool:
+    """Check if we should offer reauthentication.
+    
+    Args:
+        github: GitHubClient instance.
+        error_msg: Error message from repository creation.
+        env_key: Environment variable containing GitHub token, if any.
+        already_reauthenticated: Whether we've already offered reauthentication.
+        
+    Returns:
+        True if we should retry with reauthentication, False otherwise.
+    """
+    if not env_key or already_reauthenticated:
+        return False
+    
+    if not _is_integration_permission_error(error_msg):
+        return False
+    
+    scope_check = github.check_scopes(["repo"])
+    return not scope_check["has_scopes"] and _offer_unset_token_and_reauth(env_key)
+
+
 def _create_github_repo(
     args: argparse.Namespace,
     github: GitHubClient,
@@ -255,6 +292,7 @@ def _create_github_repo(
     template_flag = not getattr(args, "no_template", False)
     env_key = _detect_auth_token_env()
     already_reauthenticated = False
+    first_attempt = True
 
     while True:
         error_msg = _check_github_prerequisites(github)
@@ -269,8 +307,10 @@ def _create_github_repo(
             template_repo=getattr(args, "template_repo", None),
             org=args.org,
             description=args.name,
-            push=False,
+            skip_git_operations=not first_attempt,
         )
+        
+        first_attempt = False
 
         if result["success"]:
             print(f"✓ Created repository: {args.repo_name}")
@@ -278,23 +318,16 @@ def _create_github_repo(
 
         error_msg = result.get("error") or "Unknown error"
         
-        # Check for permission errors
-        permission_hint = _github_permission_hint(error_msg)
-        
-        # Check for "already exists" errors
-        exists_hint = _github_already_exists_hint(error_msg, args.repo_name)
-
-        if (
-            env_key
-            and not already_reauthenticated
-            and _is_integration_permission_error(error_msg)
-            and _offer_unset_token_and_reauth(env_key)
-        ):
+        # Check if we should retry with reauthentication
+        if _should_retry_with_reauth(github, error_msg, env_key, already_reauthenticated):
             already_reauthenticated = True
             env_key = _detect_auth_token_env()
             continue
 
         # Add hints to error message
+        permission_hint = _github_permission_hint(error_msg)
+        exists_hint = _github_already_exists_hint(error_msg, args.repo_name)
+        
         if permission_hint:
             error_msg = f"{error_msg}\n\n{permission_hint}"
         elif exists_hint:
@@ -483,7 +516,7 @@ def create_command(args: argparse.Namespace) -> int:
     
     # Prepare exercises and files
     exercises, files = _prepare_exercises(args, selector, collector)
-    if exercises is None:
+    if exercises is None or files is None:
         return 1
     
     # Create workspace
