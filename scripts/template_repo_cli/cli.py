@@ -255,6 +255,7 @@ def _create_github_repo(
     template_flag = not getattr(args, "no_template", False)
     env_key = _detect_auth_token_env()
     already_reauthenticated = False
+    first_attempt = True
 
     while True:
         error_msg = _check_github_prerequisites(github)
@@ -269,8 +270,10 @@ def _create_github_repo(
             template_repo=getattr(args, "template_repo", None),
             org=args.org,
             description=args.name,
-            push=False,
+            skip_git_operations=not first_attempt,
         )
+        
+        first_attempt = False
 
         if result["success"]:
             print(f"✓ Created repository: {args.repo_name}")

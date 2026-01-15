@@ -26,6 +26,7 @@ class GitHubClient:
         template_repo: str | None = None,
         org: str | None = None,
         description: str | None = None,
+        source_path: str | None = None,
     ) -> list[str]:
         """Build gh repo create command.
         
@@ -36,6 +37,7 @@ class GitHubClient:
                 to the --template flag used to clone from an existing template.
             org: Organization name (if creating in org).
             description: Repository description.
+            source_path: Path to local source directory to push to the repository.
             
         Returns:
             Command as list of strings.
@@ -61,6 +63,10 @@ class GitHubClient:
         # Add description if provided
         if description:
             cmd.extend(["--description", description])
+        
+        # Add source path and push flag if source is provided
+        if source_path:
+            cmd.extend(["--source", source_path, "--push"])
         
         return cmd
 
@@ -142,19 +148,19 @@ class GitHubClient:
         template_repo: str | None = None,
         org: str | None = None,
         description: str | None = None,
-        push: bool = False,
+        skip_git_operations: bool = False,
     ) -> dict[str, Any]:
         """Create a GitHub repository.
         
         Args:
             repo_name: Repository name.
-            workspace: Workspace directory.
+            workspace: Workspace directory containing files to push.
             public: Whether repository should be public.
             template: Whether to mark the repository as a template after creation.
             template_repo: Optional template repository to base the new repository on.
             org: Organization name to create the repository in.
             description: Repository description used for gh command.
-            push: Whether to push initial commit.
+            skip_git_operations: Skip git init/commit (for retries).
             
         Returns:
             Result dictionary.
@@ -166,16 +172,25 @@ class GitHubClient:
                 "message": "Dry run - no repository created",
             }
         
-        # Build create command
+        # Only do git operations on first attempt
+        if not skip_git_operations:
+            # Initialize git repository in workspace (required for --source flag)
+            self.init_git_repo(workspace)
+            
+            # Commit files (required for --push flag)
+            self.commit_files(workspace, "Initial commit")
+        
+        # Build create command with workspace as source
         cmd = self.build_create_command(
             repo_name,
             public=public,
             template_repo=template_repo,
             org=org,
             description=description,
+            source_path=str(workspace),
         )
         
-        # Execute command
+        # Execute command (this will create repo and push files)
         result = self.execute_command(cmd)
         
         # Mark repository as a template if requested
@@ -188,13 +203,6 @@ class GitHubClient:
                     "output": template_result.get("output"),
                     "returncode": template_result.get("returncode"),
                 }
-
-        # If push requested and creation successful
-        if push and result["success"]:
-            # Initialize git, commit, and push
-            self.init_git_repo(workspace)
-            self.commit_files(workspace, "Initial commit")
-            # Push would require knowing the remote URL
         
         return result
 
@@ -225,43 +233,64 @@ class GitHubClient:
             message: Commit message.
             
         Raises:
-            RuntimeError: If git user configuration is missing.
+            RuntimeError: If git user configuration is missing or commit fails.
         """
-        # Check if git is configured
+        # Check if git is configured globally
         user_name = subprocess.run(
-            ["git", "config", "user.name"],
-            cwd=workspace,
+            ["git", "config", "--global", "user.name"],
             capture_output=True,
             text=True,
             check=False,
         )
         user_email = subprocess.run(
-            ["git", "config", "user.email"],
-            cwd=workspace,
+            ["git", "config", "--global", "user.email"],
             capture_output=True,
             text=True,
             check=False,
         )
         
-        if not user_name.stdout.strip() or not user_email.stdout.strip():
-            raise RuntimeError(
-                "Git user configuration is missing. "
-                "Please configure git with 'git config --global user.name' "
-                "and 'git config --global user.email'"
+        # If global config is missing, set local config in workspace
+        if not user_name.stdout.strip():
+            subprocess.run(
+                ["git", "config", "user.name", "Template CLI"],
+                cwd=workspace,
+                capture_output=True,
+                check=True,
+            )
+        
+        if not user_email.stdout.strip():
+            subprocess.run(
+                ["git", "config", "user.email", "template-cli@example.com"],
+                cwd=workspace,
+                capture_output=True,
+                check=True,
             )
         
         # Add all files
-        subprocess.run(
-            ["git", "add", "."], cwd=workspace, capture_output=True, check=True
+        add_result = subprocess.run(
+            ["git", "add", "."], 
+            cwd=workspace, 
+            capture_output=True, 
+            text=True,
+            check=False,
         )
+        if add_result.returncode != 0:
+            raise RuntimeError(
+                f"git add failed:\n{add_result.stderr}"
+            )
         
         # Commit
-        subprocess.run(
+        commit_result = subprocess.run(
             ["git", "commit", "-m", message],
             cwd=workspace,
             capture_output=True,
-            check=True,
+            text=True,
+            check=False,
         )
+        if commit_result.returncode != 0:
+            raise RuntimeError(
+                f"git commit failed:\nstdout: {commit_result.stdout}\nstderr: {commit_result.stderr}"
+            )
 
     def push_to_remote(self, workspace: Path, remote_url: str) -> None:
         """Push to remote.
