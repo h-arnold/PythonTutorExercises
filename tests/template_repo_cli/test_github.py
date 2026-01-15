@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -189,7 +190,7 @@ class TestParseGhOutput:
         client = GitHubClient()
         output = '{"name": "test-repo", "html_url": "https://github.com/user/test-repo"}'
 
-        parsed = client.parse_json_output(output)
+        parsed: dict[str, Any] = client.parse_json_output(output)
 
         assert parsed["name"] == "test-repo"
         assert "html_url" in parsed

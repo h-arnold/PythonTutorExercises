@@ -115,7 +115,7 @@ class GitHubClient:
         except FileNotFoundError:
             return False
 
-    def parse_json_output(self, output: str) -> dict:
+    def parse_json_output(self, output: str) -> dict[str, Any]:
         """Parse JSON output from gh.
         
         Args:
