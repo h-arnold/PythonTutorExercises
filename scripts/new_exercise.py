@@ -33,7 +33,9 @@ def _slugify(text: str) -> str:
     return text
 
 
-def _make_notebook_with_parts(title: str, *, parts: int) -> dict[str, Any]:
+def _make_notebook_with_parts(
+    title: str, *, parts: int, exercise_type: str | None = None
+) -> dict[str, Any]:
     if parts < 1:
         raise ValueError("parts must be >= 1")
 
@@ -60,37 +62,62 @@ def _make_notebook_with_parts(title: str, *, parts: int) -> dict[str, Any]:
         }
     ]
 
-    if parts == 1:
-        tag = "exercise1"
-        cells.append(
-            {
-                "cell_type": "code",
-                "metadata": _meta("python", tags=[tag]),
-                "execution_count": None,
-                "outputs": [],
-                "source": [
-                    "# Exercise 1\n",
-                    "# The tests will execute the code in this cell.\n",
-                    "\n",
-                    "def solve() -> object:\n",
-                    "    \"\"\"Return the correct result for the exercise.\"\"\"\n",
-                    "    return 'TODO'\n",
-                ],
-            }
-        )
-    else:
+    # For debug exercises we scaffold a short expected-output cell, the buggy
+    # tagged student cell, and an explanation cell for each part. For other
+    # exercise types we keep the existing simple layout.
+    if exercise_type == "debug":
         for i in range(1, parts + 1):
-            tag = f"exercise{i}"
+            ex_tag = f"exercise{i}"
+            expl_tag = f"explanation{i}"
+
+            # Expected behaviour / expected output cell
             cells.append(
                 {
                     "cell_type": "markdown",
                     "metadata": _meta("markdown"),
                     "source": [
-                        f"## Exercise {i}\n",
-                        "(Write the prompt here.)\n",
+                        f"# Exercise {i} — Expected behaviour\n",
+                        "Describe what the corrected program should output.\n",
+                        "### Expected output\n",
+                        "```\n",
+                        "(put example output here)\n",
+                        "```\n",
                     ],
                 }
             )
+
+            # Buggy implementation (tagged for students to edit)
+            cells.append(
+                {
+                    "cell_type": "code",
+                    "metadata": _meta("python", tags=[ex_tag]),
+                    "execution_count": None,
+                    "outputs": [],
+                    "source": [
+                        "# BUGGY IMPLEMENTATION (students edit this tagged cell)\n",
+                        "def solve() -> object:\n",
+                        '    """Return the correct result for this exercise."""\n',
+                        "    return 'TODO'\n",
+                    ],
+                }
+            )
+
+            # What actually happened — explanation cell (tagged)
+            cells.append(
+                {
+                    "cell_type": "markdown",
+                    "metadata": _meta("markdown", tags=[expl_tag]),
+                    "source": [
+                        "### What actually happened\n",
+                        "Describe briefly what happened when you ran the code (include any error messages or incorrect output).\n",
+                    ],
+                }
+            )
+
+    else:
+        # Non-debug behaviour: keep existing single/multi-part layout
+        if parts == 1:
+            tag = "exercise1"
             cells.append(
                 {
                     "cell_type": "code",
@@ -98,14 +125,43 @@ def _make_notebook_with_parts(title: str, *, parts: int) -> dict[str, Any]:
                     "execution_count": None,
                     "outputs": [],
                     "source": [
-                        f"# Exercise {i}\n",
+                        "# Exercise 1\n",
                         "# The tests will execute the code in this cell.\n",
+                        "\n",
                         "def solve() -> object:\n",
-                        "    \"\"\"Return the correct result for this exercise.\"\"\"\n",
+                        '    """Return the correct result for the exercise."""\n',
                         "    return 'TODO'\n",
                     ],
                 }
             )
+        else:
+            for i in range(1, parts + 1):
+                tag = f"exercise{i}"
+                cells.append(
+                    {
+                        "cell_type": "markdown",
+                        "metadata": _meta("markdown"),
+                        "source": [
+                            f"## Exercise {i}\n",
+                            "(Write the prompt here.)\n",
+                        ],
+                    }
+                )
+                cells.append(
+                    {
+                        "cell_type": "code",
+                        "metadata": _meta("python", tags=[tag]),
+                        "execution_count": None,
+                        "outputs": [],
+                        "source": [
+                            f"# Exercise {i}\n",
+                            "# The tests will execute the code in this cell.\n",
+                            "def solve() -> object:\n",
+                            '    """Return the correct result for this exercise."""\n',
+                            "    return 'TODO'\n",
+                        ],
+                    }
+                )
 
     cells.append(
         {
@@ -150,6 +206,12 @@ def _validate_and_parse_args() -> argparse.Namespace:
         type=int,
         default=1,
         help="How many graded exercise cells to scaffold in the notebook (default: 1).",
+    )
+    parser.add_argument(
+        "--type",
+        choices=["debug", "modify", "make"],
+        default=None,
+        help="Optional exercise type; when set to 'debug' the scaffold includes expected-output and explanation cells.",
     )
     args = parser.parse_args()
 
@@ -251,13 +313,58 @@ def main() -> int:
             "",
         ]
 
+    # If this is a debug exercise, add tests that assert students filled the
+    # `explanationN` markdown cells with meaningful content (>10 characters).
+    if args.type == "debug":
+        test_lines += [
+            "# Explanation cell checks for debug exercises",
+            "import json",
+            "",
+            "def _get_explanation(notebook_path: str, tag: str = 'explanation1') -> str:",
+            "    nb = json.load(open(notebook_path, 'r', encoding='utf-8'))",
+            "    for cell in nb.get('cells', []):",
+            "        tags = cell.get('metadata', {}).get('tags', [])",
+            "        if tag in tags:",
+            "            return ''.join(cell.get('source', []))",
+            "    raise AssertionError(f'No explanation cell with tag {tag}')",
+            "",
+        ]
+        if args.parts == 1:
+            test_lines += [
+                "def test_explanation_has_content() -> None:",
+                f"    explanation = _get_explanation('notebooks/{exercise_key}.ipynb', tag='explanation1')",
+                "    assert len(explanation.strip()) > 10, 'Explanation must be more than 10 characters'",
+                "",
+            ]
+        else:
+            test_lines += [
+                "import pytest",
+                f"TAGS = [f'explanation{{i}}' for i in range(1, {args.parts} + 1)]",
+                "@pytest.mark.parametrize('tag', TAGS)",
+                "def test_explanations_have_content(tag: str) -> None:",
+                f"    explanation = _get_explanation('notebooks/{exercise_key}.ipynb', tag=tag)",
+                "    assert len(explanation.strip()) > 10, 'Explanation must be more than 10 characters'",
+                "",
+            ]
+
     test_path.write_text("\n".join(test_lines), encoding="utf-8")
 
-    notebook = _make_notebook_with_parts(args.title, parts=args.parts)
+    # Build notebook with the optional exercise type (e.g., debug)
+    notebook = _make_notebook_with_parts(args.title, parts=args.parts, exercise_type=args.type)
     nb_path.write_text(json.dumps(notebook, indent=2), encoding="utf-8")
 
     nb_solution_path.parent.mkdir(parents=True, exist_ok=True)
     nb_solution_path.write_text(json.dumps(notebook, indent=2), encoding="utf-8")
+
+    # If this is a debug exercise, update README to mention explanation tags
+    if args.type == "debug":
+        readme_lines = (ex_dir / "README.md").read_text(encoding="utf-8").splitlines()
+        # Add short instruction about the explanation cell
+        readme_lines.insert(
+            7,
+            "- After running your corrected solution, describe what happened in the cell tagged `explanation1` (or `explanationN`).",
+        )
+        (ex_dir / "README.md").write_text("\n".join(readme_lines) + "\n", encoding="utf-8")
 
     print(f"Created exercise: {exercise_key}")
     print(f"- {ex_dir.relative_to(ROOT)}")

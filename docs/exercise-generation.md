@@ -10,6 +10,12 @@ This document describes how to create new Python exercises in the repository.
 python scripts/new_exercise.py ex042 "Variables and Types" --slug variables_and_types
 ```
 
+For a debug exercise (scaffolds expected-output and explanation cells):
+
+```bash
+python scripts/new_exercise.py ex004 "Debug Syntax" --slug sequence_debug_syntax --type debug
+```
+
 This creates:
 - `exercises/CONSTRUCT/TYPE/ex042_variables_and_types/README.md`
 - `notebooks/ex042_variables_and_types.ipynb`
@@ -33,7 +39,7 @@ Scaffolds the boilerplate for new exercises to ensure consistency across the rep
 ### Command-Line Arguments
 
 ```
-python scripts/new_exercise.py <id> <title> [--slug SLUG] [--parts N]
+python scripts/new_exercise.py <id> <title> [--slug SLUG] [--parts N] [--type TYPE]
 ```
 
 **Required**:
@@ -43,6 +49,7 @@ python scripts/new_exercise.py <id> <title> [--slug SLUG] [--parts N]
 **Optional**:
 - `--slug`: Snake-case slug for filenames (default: auto-generated from title)
 - `--parts`: Number of exercise parts in one notebook (default: 1, max: 20)
+- `--type`: Optional exercise type (one of `debug`, `modify`, `make`). When `--type debug` is used the scaffolder will include an "Expected output" markdown cell and an `explanationN` markdown cell for each exercise part.
 
 ### What Gets Created
 
