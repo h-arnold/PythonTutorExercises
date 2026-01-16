@@ -147,6 +147,15 @@ Metadata tips:
 - When you tag a cell for grading, ensure the tag exactly matches `exercise1`, `exercise2`, etc.; the grader locates cells by this metadata tag.
 - Do not place multiple independent student solutions in the same tagged cell; the grader executes only the tagged cell's content.
 
+### Quality gate (run the verifier — BEFORE tests)
+After scaffolding + authoring the notebooks (student + solutions mirror), run the **Exercise Verifier** agent once to check:
+- exercise-type compliance (debug/modify/make format rules)
+- concept sequencing (no later constructs accidentally introduced in prompts/starter code)
+- notebook structure/tags are correct
+- teacher materials (`README.md`, `OVERVIEW.md`, `solutions.md`) exist and are appropriate
+
+Only once the verifier is happy should you start writing/refining the pytest tests.
+
 4) Write / refine tests
 - Tests should import `exec_tagged_code`:
   - `from tests.notebook_grader import exec_tagged_code`
@@ -173,6 +182,11 @@ Also verify the tests pass against the solution mirror:
 - Or (recommended): `scripts/verify_solutions.sh -q`
 
 If tests fail locally, update only the tests or notebook relevant to the exercise — do not modify unrelated exercises or global test configuration.
+
+### Quality gate (run the verifier — AFTER tests)
+After tests pass on the solution notebooks, run the **Exercise Verifier** agent again. This second pass must include Gate D (tests):
+- `PYTUTOR_NOTEBOOKS_DIR=notebooks/solutions pytest -q` (or the relevant single test file)
+- confirm student notebooks still *fail* until students do the work
 
 ## If the user wants multiple exercises in one notebook
 - Use `--parts N` to scaffold `exercise1..exerciseN`.
@@ -204,16 +218,18 @@ def test_exercises_tagged_cell_exists(tag):
 
 # For behaviour tests, parametrize with (tag, inputs, expected)
 @pytest.mark.parametrize(
-    "tag,input,expected",
+  "tag,input_value,expected",
     [
         ("exercise1", 1, 2),
         ("exercise2", [1, 2], 3),
         # add cases for other exercises
     ],
 )
-def test_exercise_behaviour(tag, input, expected):
+def test_exercise_behaviour(tag, input_value, expected):
     ns = exec_tagged_code("notebooks/exNNN_slug.ipynb", tag=tag)
-    result = ns["solve"](input)
+  solve = ns.get("solve")
+  assert solve is not None
+  result = solve(input_value)
     assert result == expected
 ```
 
@@ -252,7 +268,9 @@ from tests.notebook_grader import exec_tagged_code
 def test_lists_basics_examples():
     ns = exec_tagged_code("notebooks/ex002_lists_basics.ipynb", tag="exercise1")
     assert "solve" in ns
-    assert ns["solve"]([1, 2, 3]) == 6
+  solve = ns.get("solve")
+  assert solve is not None
+  assert solve(list((1, 2, 3))) == 6
 ```
 
 ## Style and scope

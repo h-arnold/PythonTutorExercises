@@ -1,0 +1,496 @@
+#!/usr/bin/env python3
+"""Lightweight verifier for newly generated exercises.
+
+This script is intentionally stdlib-only. It supports the Exercise Verifier
+agent by performing fast, objective checks:
+- Notebook structure: metadata.language, code-vs-tag consistency
+- Presence of expected tags (exerciseN, explanationN)
+- Basic concept progression scanning (heuristic keyword checks)
+- Presence of teacher-facing files (README/OVERVIEW/solutions) under exercises/
+
+It is not a replacement for reading the exercise prompts.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+from dataclasses import dataclass
+from pathlib import Path
+
+CONSTRUCT_ORDER: list[str] = [
+    "sequence",
+    "selection",
+    "iteration",
+    "data_types",
+    "lists",
+    "dictionaries",
+    "functions",
+    "file_handling",
+    "exceptions",
+    "libraries",
+    "oop",
+]
+
+
+@dataclass(frozen=True)
+class Finding:
+    severity: str  # "ERROR" or "WARN"
+    message: str
+    path: Path | None = None
+
+
+def _load_notebook(path: Path) -> dict:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise SystemExit(f"Notebook not found: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Invalid JSON in notebook: {path}: {exc}") from exc
+
+
+def _cell_tags(cell: dict) -> set[str]:
+    metadata = cell.get("metadata") or {}
+    tags = metadata.get("tags") or []
+    if isinstance(tags, str):
+        return {tags}
+    if isinstance(tags, list):
+        return {t for t in tags if isinstance(t, str)}
+    return set()
+
+
+def _cell_source_text(cell: dict) -> str:
+    source = cell.get("source", "")
+    if isinstance(source, list):
+        return "\n".join(str(x) for x in source)
+    if isinstance(source, str):
+        return source
+    return ""
+
+
+_EXERCISE_TAG_RE = re.compile(r"^exercise(?P<n>\d+)$")
+_EXPLANATION_TAG_RE = re.compile(r"^explanation(?P<n>\d+)$")
+
+
+def _infer_exercise_slug_from_notebook(notebook_path: Path) -> str | None:
+    name = notebook_path.name
+    if not name.endswith(".ipynb"):
+        return None
+    return name.removesuffix(".ipynb")
+
+
+def _find_exercise_dir(ex_slug: str, repo_root: Path) -> Path | None:
+    # Expected: exercises/<construct>/<type>/<ex_slug>/
+    exercises_root = repo_root / "exercises"
+    if not exercises_root.exists():
+        return None
+
+    candidates = [p for p in exercises_root.rglob(ex_slug) if p.is_dir()]
+    # Prefer the fully-qualified construct/type layout
+    for p in candidates:
+        rel = p.relative_to(exercises_root)
+        if len(rel.parts) >= 3:
+            return p
+    return candidates[0] if candidates else None
+
+
+def _infer_construct_and_type(ex_dir: Path) -> tuple[str | None, str | None]:
+    # ex_dir: exercises/<construct>/<type>/<ex_slug>
+    try:
+        construct = ex_dir.parent.parent.name
+        ex_type = ex_dir.parent.name
+        return construct, ex_type
+    except Exception:
+        return None, None
+
+
+def _check_teacher_files(ex_dir: Path) -> list[Finding]:
+    findings: list[Finding] = []
+
+    required = ["README.md", "OVERVIEW.md", "solutions.md"]
+    for filename in required:
+        p = ex_dir / filename
+        if not p.exists():
+            severity = "ERROR" if filename in {"README.md", "OVERVIEW.md"} else "WARN"
+            findings.append(
+                Finding(
+                    severity,
+                    f"Missing teacher file: {p.relative_to(ex_dir)}",
+                    path=p,
+                )
+            )
+
+    return findings
+
+
+def _check_cell_language(cell_index: int, cell: dict, nb_path: Path) -> list[Finding]:
+    metadata = cell.get("metadata") or {}
+    lang = metadata.get("language")
+    if lang in {"python", "markdown"}:
+        return []
+    return [
+        Finding(
+            "ERROR",
+            f"Cell {cell_index} missing/invalid metadata.language (expected 'python' or 'markdown')",
+            path=nb_path,
+        )
+    ]
+
+
+def _collect_tag_findings(
+    *,
+    cell_type: str | None,
+    tags: set[str],
+    nb_path: Path,
+) -> tuple[set[str], set[str], list[Finding]]:
+    exercise_tags: set[str] = set()
+    explanation_tags: set[str] = set()
+    findings: list[Finding] = []
+
+    for tag in tags:
+        if _EXERCISE_TAG_RE.match(tag):
+            exercise_tags.add(tag)
+            if cell_type != "code":
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        f"Tag {tag} must be on a code cell (found on {cell_type!r})",
+                        path=nb_path,
+                    )
+                )
+        if _EXPLANATION_TAG_RE.match(tag):
+            explanation_tags.add(tag)
+            if cell_type != "markdown":
+                findings.append(
+                    Finding(
+                        "ERROR",
+                        f"Tag {tag} must be on a markdown cell (found on {cell_type!r})",
+                        path=nb_path,
+                    )
+                )
+
+    return exercise_tags, explanation_tags, findings
+
+
+def _tag_numbers(tags: set[str], pattern: re.Pattern[str]) -> list[int]:
+    nums: list[int] = []
+    for tag in tags:
+        match = pattern.match(tag)
+        if match is None:
+            continue
+        nums.append(int(match.group("n")))
+    return sorted(nums)
+
+
+def _check_tag_continuity(
+    *,
+    nb_path: Path,
+    exercise_tags: set[str],
+    explanation_tags: set[str],
+    expect_debug: bool,
+) -> list[Finding]:
+    findings: list[Finding] = []
+
+    if not exercise_tags:
+        findings.append(
+            Finding(
+                "ERROR",
+                "No exerciseN tags found (expected at least exercise1)",
+                path=nb_path,
+            )
+        )
+        return findings
+
+    if expect_debug and not explanation_tags:
+        findings.append(
+            Finding(
+                "ERROR",
+                "Debug exercise expected explanationN tag(s) but none were found",
+                path=nb_path,
+            )
+        )
+
+    exercise_nums = _tag_numbers(exercise_tags, _EXERCISE_TAG_RE)
+    expected = list(range(1, max(exercise_nums) + 1))
+    if exercise_nums != expected:
+        findings.append(
+            Finding(
+                "WARN",
+                f"Exercise tags are not contiguous: found {exercise_nums}, expected {expected}",
+                path=nb_path,
+            )
+        )
+
+    if expect_debug and explanation_tags:
+        exp_nums = _tag_numbers(explanation_tags, _EXPLANATION_TAG_RE)
+        if exp_nums and max(exp_nums) < max(exercise_nums):
+            findings.append(
+                Finding(
+                    "WARN",
+                    "Some exercise parts may be missing matching explanationN cells",
+                    path=nb_path,
+                )
+            )
+
+    return findings
+
+
+def _check_notebook_structure(nb_path: Path, nb: dict, *, expect_debug: bool) -> list[Finding]:
+    findings: list[Finding] = []
+
+    cells = nb.get("cells")
+    if not isinstance(cells, list):
+        return [Finding("ERROR", "Notebook has no 'cells' list", path=nb_path)]
+
+    found_exercise_tags: set[str] = set()
+    found_explanation_tags: set[str] = set()
+
+    for idx, cell in enumerate(cells, start=1):
+        if not isinstance(cell, dict):
+            findings.append(Finding("ERROR", f"Cell {idx} is not an object", path=nb_path))
+            continue
+
+        findings.extend(_check_cell_language(idx, cell, nb_path))
+
+        cell_type = cell.get("cell_type")
+        tags = _cell_tags(cell)
+        exercise_tags, explanation_tags, tag_findings = _collect_tag_findings(
+            cell_type=cell_type,
+            tags=tags,
+            nb_path=nb_path,
+        )
+
+        found_exercise_tags.update(exercise_tags)
+        found_explanation_tags.update(explanation_tags)
+        findings.extend(tag_findings)
+
+    findings.extend(
+        _check_tag_continuity(
+            nb_path=nb_path,
+            exercise_tags=found_exercise_tags,
+            explanation_tags=found_explanation_tags,
+            expect_debug=expect_debug,
+        )
+    )
+
+    return findings
+
+
+def _progression_rules() -> dict[str, list[re.Pattern[str]]]:
+    # Patterns that indicate the presence of a construct.
+    # These are heuristic checks and intentionally conservative.
+    return {
+        "selection": [re.compile(r"\bif\b"), re.compile(r"\belif\b"), re.compile(r"\belse\b")],
+        "iteration": [
+            re.compile(r"\bfor\b"),
+            re.compile(r"\bwhile\b"),
+            re.compile(r"\bbreak\b"),
+            re.compile(r"\bcontinue\b"),
+            re.compile(r"\brange\s*\("),
+        ],
+        "data_types": [
+            re.compile(r"\bint\s*\("),
+            re.compile(r"\bfloat\s*\("),
+            re.compile(r"\bstr\s*\("),
+        ],
+        "lists": [
+            re.compile(r"\[[^\]]*\]"),
+            re.compile(r"\.append\s*\("),
+            re.compile(r"\blen\s*\("),
+            re.compile(r"\.sort\s*\("),
+        ],
+        "dictionaries": [
+            re.compile(r"\{[^}]*:[^}]*\}"),
+            re.compile(r"\.get\s*\("),
+            re.compile(r"\.items\s*\("),
+        ],
+        "functions": [re.compile(r"^\s*def\s+", re.MULTILINE), re.compile(r"\breturn\b")],
+        "file_handling": [re.compile(r"\bopen\s*\("), re.compile(r"\bwith\s+open\b")],
+        "exceptions": [re.compile(r"\btry\b"), re.compile(r"\bexcept\b"), re.compile(r"\braise\b")],
+        "libraries": [
+            re.compile(r"^\s*import\b", re.MULTILINE),
+            re.compile(r"^\s*from\s+\w+\s+import\b", re.MULTILINE),
+        ],
+        "oop": [re.compile(r"^\s*class\s+", re.MULTILINE), re.compile(r"\bself\b\s*\.")],
+    }
+
+
+def _index_of_construct(construct: str) -> int:
+    try:
+        return CONSTRUCT_ORDER.index(construct)
+    except ValueError:
+        return -1
+
+
+def _scan_for_progression_violations(
+    *,
+    text: str,
+    allowed_construct: str,
+    path: Path,
+) -> list[Finding]:
+    findings: list[Finding] = []
+
+    rules = _progression_rules()
+    allowed_idx = _index_of_construct(allowed_construct)
+    if allowed_idx < 0:
+        return [
+            Finding(
+                "WARN",
+                f"Unknown construct: {allowed_construct!r} (skipping progression checks)",
+                path=path,
+            )
+        ]
+
+    # If we're in construct K, then constructs strictly after K are disallowed.
+    disallowed = CONSTRUCT_ORDER[allowed_idx + 1 :]
+
+    for construct in disallowed:
+        for pat in rules.get(construct, []):
+            if pat.search(text):
+                findings.append(
+                    Finding(
+                        "WARN",
+                        f"Possible progression violation: found {construct} pattern {pat.pattern!r}",
+                        path=path,
+                    )
+                )
+                break
+
+    return findings
+
+
+def _collect_code_cell_text(nb: dict) -> str:
+    cells = nb.get("cells")
+    if not isinstance(cells, list):
+        return ""
+    return "\n\n".join(
+        _cell_source_text(c) for c in cells if isinstance(c, dict) and c.get("cell_type") == "code"
+    )
+
+
+def _print_findings(findings: list[Finding]) -> None:
+    for f in findings:
+        loc = f" ({f.path})" if f.path else ""
+        print(f"{f.severity}: {f.message}{loc}")
+
+
+def main(argv: list[str] | None = None) -> int:  # noqa: C901
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "notebook",
+        type=Path,
+        help="Path to the student notebook under notebooks/",
+    )
+    parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=Path(__file__).resolve().parents[1],
+        help="Repository root (default: auto-detected)",
+    )
+    parser.add_argument(
+        "--construct",
+        choices=CONSTRUCT_ORDER,
+        default=None,
+        help="Construct to validate progression against (default: inferred from exercises/)",
+    )
+    parser.add_argument(
+        "--type",
+        choices=["debug", "modify", "make"],
+        default=None,
+        help="Exercise type (default: inferred from exercises/)",
+    )
+
+    args = parser.parse_args(argv)
+
+    nb_path = args.notebook
+    repo_root = args.repo_root
+
+    slug = _infer_exercise_slug_from_notebook(nb_path)
+    if slug is None:
+        print("ERROR: Notebook path must end with .ipynb")
+        return 2
+
+    ex_dir = _find_exercise_dir(slug, repo_root)
+    inferred_construct: str | None = None
+    inferred_type: str | None = None
+    if ex_dir is not None:
+        inferred_construct, inferred_type = _infer_construct_and_type(ex_dir)
+
+    construct = args.construct or inferred_construct
+    ex_type = args.type or inferred_type
+
+    findings: list[Finding] = []
+
+    # Teacher files
+    if ex_dir is None:
+        findings.append(
+            Finding(
+                "WARN",
+                f"Could not locate exercises/ directory for {slug!r} (skipping teacher-file checks)",
+                path=repo_root / "exercises",
+            )
+        )
+    else:
+        findings.extend(_check_teacher_files(ex_dir))
+
+    # Notebook structure (student)
+    nb_student = _load_notebook(nb_path)
+    expect_debug = ex_type == "debug"
+    findings.extend(_check_notebook_structure(nb_path, nb_student, expect_debug=expect_debug))
+
+    # Notebook structure (solutions mirror) if present
+    nb_solution_path = repo_root / "notebooks" / "solutions" / nb_path.name
+    if nb_solution_path.exists():
+        nb_solution = _load_notebook(nb_solution_path)
+        findings.extend(
+            _check_notebook_structure(nb_solution_path, nb_solution, expect_debug=expect_debug)
+        )
+    else:
+        findings.append(
+            Finding("WARN", "Solution mirror notebook not found", path=nb_solution_path)
+        )
+
+    # Progression scan (student + solution)
+    if construct is None:
+        findings.append(
+            Finding(
+                "WARN",
+                "Could not infer construct; pass --construct to enable progression checks",
+                path=nb_path,
+            )
+        )
+    else:
+        student_text = _collect_code_cell_text(nb_student)
+        findings.extend(
+            _scan_for_progression_violations(
+                text=student_text, allowed_construct=construct, path=nb_path
+            )
+        )
+
+        if nb_solution_path.exists():
+            solution_text = _collect_code_cell_text(_load_notebook(nb_solution_path))
+            findings.extend(
+                _scan_for_progression_violations(
+                    text=solution_text,
+                    allowed_construct=construct,
+                    path=nb_solution_path,
+                )
+            )
+
+    # Report
+    _print_findings(findings)
+
+    error_count = sum(1 for f in findings if f.severity == "ERROR")
+    warn_count = sum(1 for f in findings if f.severity == "WARN")
+
+    if error_count:
+        print(f"\nFAIL: {error_count} error(s), {warn_count} warning(s)")
+        return 1
+
+    print(f"\nOK: {warn_count} warning(s)")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

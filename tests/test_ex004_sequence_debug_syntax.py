@@ -91,7 +91,7 @@ def test_solution_output(tag: str, expected: str) -> None:
         # Capture stdout
         f = StringIO()
         with contextlib.redirect_stdout(f):
-            ns = exec_tagged_code("notebooks/solutions/ex004_sequence_debug_syntax.ipynb", tag=tag)
+            exec_tagged_code("notebooks/solutions/ex004_sequence_debug_syntax.ipynb", tag=tag)
 
         if tag == "exercise7":
             sys.stdin = old_stdin

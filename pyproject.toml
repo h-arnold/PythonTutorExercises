@@ -39,6 +39,9 @@ pythonpath = ["."]
 
 [tool.ruff]
 line-length = 100
+exclude = [
+  "notebooks/**",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C90", "LOG", "PIE", "RUF"]
