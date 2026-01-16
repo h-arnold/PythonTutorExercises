@@ -19,3 +19,12 @@ These exercises are intended to be taught in the following order:
    - Focus: Assigning strings to variables, reading text with `input()`, and joining variables via concatenation.
    - Type: Modification exercises where students tweak assignments and print statements.
    - Purpose: Reinforce how variables hold values, show how `input()` stores text, and practise building final strings by combining variables.
+
+3. [**Sequence Debug Syntax**](`ex004_sequence_debug_syntax`)
+
+[Supporting docs](./debug/ex004_sequence_debug_syntax/)
+[Notebook](notebooks/ex004_sequence_debug_syntax.ipynb)
+
+   - Focus: Fixing common syntax errors in `print()`, string quotes, variable names, simple arithmetic and `input()` usage.
+   - Type: Debug exercises where students diagnose and correct buggy code.
+   - Purpose: Teach students to read error messages and make targeted fixes to faulty code.

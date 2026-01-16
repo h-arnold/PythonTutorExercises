@@ -262,6 +262,60 @@ Multi-part notebook tips:
 
 ## Output expectations
 - When generating notebook content in-chat, use the XML cell format (`<VSCode.Cell language="python">...</VSCode.Cell>`).
+- Expected output should be shown in a fenced code block within the markdown prompt cell (triple backticks).
+
+### Notating interactive user input in Expected Output
+When a notebook prompt requires the user to type input, use the following standard notation: place the user's entry in square brackets immediately after the prompt using the labelled prefix `Input:`. Place all interactive lines inside the same expected-output block as the program output.
+
+Examples:
+
+```
+How many apples? [Input: 5]
+You have 10 apples in total
+```
+
+```
+Enter your name: [Input: Alice]
+Hello Alice
+```
+
+```
+Enter first number: [Input: 2]
+Enter second number: [Input: 3]
+The sum is 5
+```
+
+Rules:
+- Use `Prompt? [Input: value]` when the prompt and input appear on the same line.
+- For multiple prompts, list each prompt and its input on a separate line.
+- If the program echoes the input, still show the prompt line with `[Input: ...]`, then the program's printed output below.
+- Keep examples concise and inside the same code block as other expected output.
+When a notebook prompt requires the user to type input, use the following standard notation: place the user's entry in square brackets immediately after the prompt using the labelled prefix `Input:`. Place all interactive lines inside the same expected-output block as the program output.
+
+Examples:
+
+```
+How many apples? [Input: 5]
+You have 10 apples in total
+```
+
+```
+Enter your name: [Input: Alice]
+Hello Alice
+```
+
+```
+Enter first number: [Input: 2]
+Enter second number: [Input: 3]
+The sum is 5
+```
+
+Rules:
+- Use `Prompt? [Input: value]` when the prompt and input appear on the same line.
+- For multiple prompts, list each prompt and `[Input: ...]` on its own line.
+- If the program echoes the input, still show the prompt line with `[Input: ...]` and then the program's printed output below.
+- Keep examples concise and inside the same code block as other expected output.
+
 - Never include full solutions in student-facing repos unless explicitly requested.
 
 ## Small examples and quick references

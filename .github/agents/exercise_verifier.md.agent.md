@@ -39,6 +39,7 @@ Verify the student notebook matches the required format for its type:
 - Prompt does not explain the bug or include hint comments.
 - There is a markdown explanation cell tagged `explanationN` that asks “What actually happened” (neutral).
 - The notebook shows expected output for the corrected behaviour.
+- If the exercise includes interactive prompts (requests for user input), the expected-output block must display any user-entered values using the standard bracketed notation: `Prompt? [Input: value]`. This makes the transcript unambiguous for students and easier to parse in automated checks (see `docs/exercise-types/debug.md` for examples).
 
 **Modify exercises** (see `docs/exercise-types/modify.md`):
 - Working code is shown (non-tagged), and the graded `exerciseN` cell is what students modify.
@@ -109,6 +110,8 @@ For both student + solution notebooks:
 - Every cell must have `metadata.language` (`markdown` or `python`).
 
 Note: existing notebooks may also include a top-level `id` field on cells; preserve it.
+
+- For interactive prompts, verify the expected-output markdown uses the bracketed input notation (`[Input: ...]`) *inside* the fenced code block. A simple heuristic is to search for the literal pattern `[Input:` within the prompt cell; if found, confirm it appears inside a code fence and matches the prompt text.
 
 **Automation helper (recommended):** the same script checks language fields, tag placement, and solution-mirror presence:
 - `python scripts/verify_exercise_quality.py notebooks/exNNN_slug.ipynb --type <debug|modify|make>`
