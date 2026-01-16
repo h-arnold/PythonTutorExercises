@@ -413,10 +413,16 @@ def _scan_for_progression_violations(
                         regions: list[tuple[int, int]] = []
                         for idx, m in enumerate(func_defs):
                             s = m.start()
-                            e = func_defs[idx + 1].start() if idx + 1 < len(func_defs) else len(text)
+                            e = (
+                                func_defs[idx + 1].start()
+                                if idx + 1 < len(func_defs)
+                                else len(text)
+                            )
                             regions.append((s, e))
                         return_positions = [m.start() for m in re.finditer(r"\breturn\b", text)]
-                        if return_positions and all(any(s <= pos < e for s, e in regions) for pos in return_positions):
+                        if return_positions and all(
+                            any(s <= pos < e for s, e in regions) for pos in return_positions
+                        ):
                             continue
                 # otherwise fallthrough to regular warning
 
