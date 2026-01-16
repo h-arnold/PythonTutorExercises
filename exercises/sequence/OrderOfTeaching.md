@@ -28,3 +28,12 @@ These exercises are intended to be taught in the following order:
    - Focus: Fixing common syntax errors in `print()`, string quotes, variable names, simple arithmetic and `input()` usage.
    - Type: Debug exercises where students diagnose and correct buggy code.
    - Purpose: Teach students to read error messages and make targeted fixes to faulty code.
+
+4. [**Sequence Debug Logic**](`ex005_sequence_debug_logic`)
+
+[Supporting docs](./debug/ex005_sequence_debug_logic/)
+[Notebook](notebooks/ex005_sequence_debug_logic.ipynb)
+
+   - Focus: Fixing common *logical* errors with string values, variable assignment and short message construction.
+   - Type: Debug exercises with an emphasis on reading expected output and correcting subtle wording/logic mistakes.
+   - Purpose: Build students' attention to detail and ability to reason about intended program behaviour.
