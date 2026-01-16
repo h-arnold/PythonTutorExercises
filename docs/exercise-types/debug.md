@@ -5,7 +5,11 @@ Students should be presented with a mixture of syntactic and logical errors. Whe
 **Error count progression**: 
 - Exercises 1-5: Each should contain exactly **one error** to help students build confidence and focus on a single issue at a time.
 - Exercises 6-10: Gradually increase the number of errors where possible and appropriate to the task (e.g., exercise 6 might have 1-2 errors, exercise 10 might have 2-3).
-- Errors should be **realistic** (what students would actually write) whenever possible. If realistic errors aren't appropriate for the learning objective, then use contrived errors that serve the pedagogical goal. 
+- Errors should be **realistic** (what students would actually write) whenever possible. If realistic errors aren't appropriate for the learning objective, then use contrived errors that serve the pedagogical goal.
+
+**CRITICAL: Every Exercise Must Contain an Actual Bug**
+
+There should be no "working code" exercises disguised as debug tasks. If the code runs without error and produces the correct output, it is not a debugging exercise. 
 
 **Common syntactic and logical errors (examples)**
 
@@ -118,14 +122,211 @@ def test_explanation_has_content():
     assert len(explanation.strip()) > 10, "Explanation must be more than 10 characters"
 ```
 
-##### Important: Debugging Exercise Cell Comments
+## Critical Principles for Student-Facing Debugging Exercises
 
-**Do NOT** include explanatory comments in the student `exercise` cells that reveal what the bug is. For example:
+### 1. **NEVER Reveal the Bug in the Exercise Title**
+
+Students must discover the bug themselves. Telling them what to fix defeats the learning objective.
+
+❌ **Bad** (reveals the bug):
+- "Exercise 1 — Missing closing parenthesis"
+- "Exercise 3 — Typo in variable name"
+- "Exercise 5 — Missing quotes around string"
+
+✅ **Good** (neutral, student discovers the bug):
+- "Exercise 1 — Print a message"
+- "Exercise 3 — Print a greeting"
+- "Exercise 5 — Use a variable"
+
+### 2. **NEVER Explain What the Bug Is in the Prompt or Code**
+
+The buggy code cell should NOT include hints or descriptions of what's wrong. Only show:
+- What the program should do (briefly, neutral)
+- What the expected output is
+- The buggy code itself (clean, no hint comments)
+
+❌ **Bad** (explains the bug in title and prompt):
+
+```markdown
+## Exercise 2 — Missing quotes around string
+
+**What's wrong?** Text must be wrapped in quotes.
+
+**Buggy code:**
+```python
+print(I like Python)
+```
+```
+
+✅ **Good** (neutral, requires investigation):
+
+```markdown
+## Exercise 2 — Print a message
+
+**Expected output:**
+```
+I like Python
+```
+
+**Buggy code:**
+```python
+print(I like Python)
+```
+```
+
+### 3. **EVERY Exercise Must Contain an Actual Bug**
+
+Each exercise should fail to run (syntax error, runtime error) or produce incorrect output. There should be NO "working code" exercises disguised as debug tasks.
+
+❌ **Bad** (no bug—code works perfectly):
+
+```markdown
+## Exercise 7 — Greet the user
+
+**Expected output:**
+```
+Hello world
+```
+
+**Buggy code:**
+```python
+print("Hello world")
+```
+```
+
+This code runs without error and produces the correct output—it's not a debugging exercise!
+
+### 4. **Keep Student Notebook Prompts Neutral**
+
+Explanation cells should prompt students to investigate and reflect, not give hints.
+
+❌ **Bad** (hints at the solution):
+
+```markdown
+### What actually happened
+
+Describe what error you got. Fix the code above.
+
+*Hint: Check if all parentheses are matched.*
+```
+
+✅ **Good** (neutral, invites investigation):
+
+```markdown
+### What actually happened
+
+Describe what error you got or what incorrect output appeared.
+```
+
+### 5. **The Solutions Notebook Is Where You Explain the Bugs**
+
+- **Student notebook (`notebooks/exNNN.ipynb`)**: Neutral titles and prompts. Buggy code with NO hints. Students must investigate to discover the bug.
+- **Solutions notebook (`notebooks/solutions/exNNN.ipynb`)**: CAN include detailed explanations in markdown cells. Teachers read these to understand the pedagogical intent. Students never see this version.
+
+Example comparison:
+
+**Student notebook:**
+```markdown
+## Exercise 4 — Multiply two numbers
+
+**Expected output:**
+```
+50
+```
+
+**Buggy code:**
+```python
+print(5 + 10)
+```
+```
+
+**Solutions notebook (for teacher reference):**
+```markdown
+## Exercise 4 — Multiply two numbers
+
+**Expected output:**
+```
+50
+```
+
+**Buggy code:**
+```python
+print(5 + 10)
+```
+
+### What's actually wrong
+
+The code uses `+` (addition) instead of `*` (multiplication). This is a common mistake when students are first learning operators.
+
+### Corrected code
+
+```python
+print(5 * 10)
+```
+
+### Teaching notes
+
+Common misconceptions:
+- Students may try `/` (division) instead
+- Some may not understand why Python doesn't infer the correct operator
+
+Reinforce: Python requires explicit operator choice; it cannot guess your intent from context.
+```
+
+### 6. **Do NOT Include Hint Comments in Student Buggy Code**
+
+Buggy code should be clean—no comments revealing what's wrong.
 
 ❌ **Bad** (reveals the bug):
 
-``` python
-    # Bug: apostrophe inside single quotes
-    phrase = 'It's nice'
-    return phrase
+```python
+phrase = 'It's nice'  # Bug: apostrophe inside single quotes
+print(phrase)
 ```
+
+✅ **Good** (clean code):
+
+```python
+phrase = 'It's nice'
+print(phrase)
+```
+
+## Testing Guidance
+
+Tests for debug exercises should:
+
+1. Execute the fixed code (from the student's corrected cell) and verify it produces the correct output.
+2. Assert that the student filled in the explanation cell with meaningful content (more than 10 non-whitespace characters).
+
+Example test helper to read an explanation cell:
+
+```python
+import json
+
+def _get_explanation(notebook_path: str, tag: str = "explanation1") -> str:
+    nb = json.load(open(notebook_path, "r", encoding="utf-8"))
+    for cell in nb.get("cells", []):
+        tags = cell.get("metadata", {}).get("tags", [])
+        if tag in tags:
+            return "".join(cell.get("source", []))
+    raise AssertionError(f"No explanation cell with tag {tag}")
+
+# Example test
+def test_explanation_has_content():
+    explanation = _get_explanation("notebooks/ex004_sequence_debug_syntax.ipynb", tag="explanation1")
+    assert len(explanation.strip()) > 10, "Explanation must be more than 10 characters"
+```
+
+---
+
+## Summary Checklist for Authoring Debug Exercises
+
+Before finalising a debug notebook, ensure:
+
+- [ ] **Every exercise has an actual bug** (fails to run or produces incorrect output)
+- [ ] **Exercise titles are neutral** (do not reveal the bug type)
+- [ ] **Prompts are neutral** (no hints, no explanations of what's wrong)
+- [ ] **Buggy code is clean** (no comments hinting at the bug)
+- [ ] **Detailed explanations are in solutions notebook only** (not visible to students)
+- [ ] **Each cell is tagged correctly** (`exercise1`–`exercise10`, `explanation1`–`explanation10`)
+- [ ] **Tests verify correctness AND explanation content** (explanation > 10 characters)
