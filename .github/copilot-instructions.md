@@ -15,7 +15,7 @@ This repository provides notebook-based Python exercises with automated grading 
 **Documentation**:
 - [Project Structure](../docs/project-structure.md) - Repository organisation and file layout
 - [Testing Framework](../docs/testing-framework.md) - How the grading system works
-- [Exercise Generation](../docs/exercise-generation.md) - Creating new exercises
+- [Exercise Generation CLI](../docs/exercise-generation-cli.md) - Instructions for using the exercise generation CLI tool to scaffold new Python exercises
 - [Setup Guide](../docs/setup.md) - Installation and configuration
 - [Development Guide](../docs/development.md) - Contributing and maintenance
 

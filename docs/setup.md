@@ -105,12 +105,12 @@ If you're creating or modifying exercises:
 2. **Review the documentation**:
    - [Project Structure](project-structure.md)
    - [Testing Framework](testing-framework.md)
-   - [Exercise Generation](exercise-generation.md)
+   - [Exercise Generation CLI](exercise-generation-cli.md) — Instructions for using the exercise generation CLI tool to scaffold new Python exercises
 3. **Create exercises** using the scaffolding script:
    ```bash
    python scripts/new_exercise.py ex042 "Your Title" --slug your_slug
    ```
-4. **Author the exercise** following the guidelines in [Exercise Generation](exercise-generation.md)
+4. **Author the exercise** following the guidelines in [Exercise Generation CLI](exercise-generation-cli.md), which documents how to use the exercise generation CLI tool to scaffold new Python exercises.
 5. **Verify solutions** pass tests:
    ```bash
    scripts/verify_solutions.sh tests/test_ex042_your_slug.py

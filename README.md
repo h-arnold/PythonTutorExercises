@@ -69,7 +69,7 @@ This repo includes a custom Copilot Chat mode for generating exercises.
 5. Verify the solution notebook passes tests:
    - [scripts/verify_solutions.sh](scripts/verify_solutions.sh) -q
 
-More detail and expected structure: [docs/exercise-generation.md](docs/exercise-generation.md)
+More detail and expected structure: [docs/exercise-generation-cli.md](docs/exercise-generation-cli.md) — Instructions for using the exercise generation CLI tool to scaffold new Python exercises.
 
 ## Quickstart (create a GitHub Classroom template repo)
 
@@ -106,7 +106,7 @@ Full CLI reference: [docs/CLI_README.md](docs/CLI_README.md)
 
 - [docs/project-structure.md](docs/project-structure.md)
 - [docs/testing-framework.md](docs/testing-framework.md)
-- [docs/exercise-generation.md](docs/exercise-generation.md)
+- [docs/exercise-generation-cli.md](docs/exercise-generation-cli.md) — Instructions for using the exercise generation CLI tool to scaffold new Python exercises.
 - [docs/setup.md](docs/setup.md)
 - [docs/CLI_README.md](docs/CLI_README.md)
 

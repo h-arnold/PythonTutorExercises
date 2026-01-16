@@ -92,7 +92,7 @@ When adding features:
 
 1. **Update argument parsing**: Add new CLI flags if needed
 2. **Update template generation**: Modify `_make_notebook_with_parts()` for notebook changes
-3. **Update documentation**: Reflect changes in `docs/exercise-generation.md`
+3. **Update documentation**: Reflect changes in `docs/exercise-generation-cli.md` (instructions for using the exercise generation CLI tool to scaffold new Python exercises)
 4. **Test the generated output**: Ensure notebooks and tests work correctly
 
 ## Code Quality Standards
@@ -280,6 +280,6 @@ When updating documentation:
 Documentation structure:
 - `docs/project-structure.md`: Repository organisation
 - `docs/testing-framework.md`: How grading works
-- `docs/exercise-generation.md`: Creating exercises
+- `docs/exercise-generation-cli.md`: Instructions for using the exercise generation CLI tool to scaffold new Python exercises
 - `docs/setup.md`: Installation and configuration
 - `docs/development.md`: This file - contributor guide
